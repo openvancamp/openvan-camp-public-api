@@ -379,7 +379,7 @@ export function createServer(): McpServer {
     {
       title: "License Plate Format And Region Codes",
       description:
-        "How a country's license plate looks and reads (standard, size, format) and every region code on its plates, grouped by region — e.g. which region is 77 or 199 on Russian plates.",
+        "How a country's license plate looks and reads (standard, size, format), its plate types (standard, diplomatic, police, taxi…) with example numbers, and every region code on its plates, grouped by region — e.g. which region is 77 or 199 on Russian plates.",
       inputSchema: getLicensePlateCountryInput,
       annotations: readOnlyAnnotations("License Plate Format And Region Codes"),
     },
@@ -390,7 +390,7 @@ export function createServer(): McpServer {
     {
       title: "Check A License Plate",
       description:
-        "Validate a plate number against the country's format (look-alike letters are normalized) and say which region its code belongs to. Never identifies the owner or the vehicle's location.",
+        "Validate a plate number against the country's format (look-alike letters are normalized) and say which region its code belongs to. Pass type for special plates (e.g. Russian diplomatic, police). Never identifies the owner or the vehicle's location.",
       inputSchema: checkLicensePlateInput,
       annotations: readOnlyAnnotations("Check A License Plate"),
     },
@@ -401,7 +401,7 @@ export function createServer(): McpServer {
     {
       title: "License Plate Image",
       description:
-        "Draw a license plate as an image (PNG shown inline, plus SVG/PNG links) exactly as openvan.camp renders it. custom=true draws any text, e.g. a name, in the plate layout.",
+        "Draw a license plate as an image (PNG shown inline, plus SVG/PNG links) exactly as openvan.camp renders it. type picks the plate kind, e.g. diplomatic (red), police (blue), military (black), taxi_bus (yellow) on Russian plates; each type has its own number format. custom=true draws any text, e.g. a name, in the plate layout.",
       inputSchema: getLicensePlateImageInput,
       annotations: readOnlyAnnotations("License Plate Image"),
     },

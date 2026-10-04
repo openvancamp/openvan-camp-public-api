@@ -1,6 +1,6 @@
 {
   "name": "@openvancamp/mcp-server",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "mcpName": "io.github.Kopaev/openvan-travel",
   "description": "Official MCP server for OpenVan.camp — free vanlife/RV travel data: fuel prices, toll roads, holidays and peak traffic, travel hazards, power plugs, customs rules, events, weather scores, food index, currency, news, license plates of the world. No auth, CC BY 4.0.",
   "license": "MIT",

@@ -378,6 +378,20 @@ curl "https://openvan.camp/api/plates/ru/validate?number=A123BC&region=799" # va
 curl https://openvan.camp/api/plates/ru/random                              # random plate + image URLs
 ```
 
+**Plate types** — special plates have their own colour and number format. `GET /api/plates/{code}/types`
+lists them (on Russian plates: `private`, `diplomatic` red, `police` blue, `military` black, `taxi_bus` yellow,
+`motorcycle`, `trailer`, `tractor`, `export_transit`), each with an example number. Pass `type` to the image,
+`/random` and `/validate`; the response says which `type` was used:
+
+```bash
+curl "https://openvan.camp/api/plates/ru/random?type=police"                # a valid blue police plate + image URLs
+curl "https://openvan.camp/api/plates/ru/validate?number=У7962&region=790&type=police"
+```
+
+```html
+<img src="https://openvan.camp/api/plates/ru/plate.svg?number=190Т307&region=23&type=diplomatic" alt="190 Т 307 23">
+```
+
 To draw plates in the browser yourself (e.g. an interactive generator), load the scripts listed in
 `data.engine.scripts` of `/api/plates/{code}` in order and call
 `Plates.render(code, number, region)` → `{svg}` (an SVG element) or `{error}`.

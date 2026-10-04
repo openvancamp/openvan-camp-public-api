@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-04
+
+### Added
+- **License plate types in the MCP server (v0.6.2)**: `check_license_plate` and `get_license_plate_image` take
+  `type` — e.g. on Russian plates `diplomatic` (red), `police` (blue), `military` (black), `taxi_bus` (yellow).
+  `get_license_plate_country` lists the country's plate types with example numbers. An unknown type or a number
+  outside the type's format returns a clear error instead of a bare 422.
+- **API**: `GET /api/plates/{code}/random` and `/validate` now return `type` — the plate type the number was
+  generated or checked as (the requested key, or the country's default). `openapi.yaml` updated.
+
 ## 2026-10-03
 
 ### Added

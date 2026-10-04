@@ -2512,6 +2512,11 @@ components:
             region_iso3166_2:
               type: string
               nullable: true
+            type:
+              type: string
+              nullable: true
+              example: private
+              description: "Plate type the number was checked as: the requested `type`, or the country's default type key. Null for countries without plate types."
             image:
               type: object
               properties:
@@ -2535,7 +2540,15 @@ components:
         success:
           type: boolean
         data:
-          $ref: '#/components/schemas/LicensePlate'
+          allOf:
+            - $ref: '#/components/schemas/LicensePlate'
+            - type: object
+              properties:
+                type:
+                  type: string
+                  nullable: true
+                  example: police
+                  description: "Plate type the number was generated as: the requested `type`, or the country's default type key. Null for countries without plate types."
         meta:
           type: object
           properties:
