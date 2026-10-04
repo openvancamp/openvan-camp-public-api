@@ -53,6 +53,11 @@ check "npx MCP tool call get_power_plugs GB" "$(echo "$out" | jq -r 'select(.id=
 hosted=$(curl -s -X POST https://mcp.openvan.camp/mcp -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' -d "$MCP_LIST" | sed -n 's/^data: //p;/^{/p' | head -1)
 check "hosted https://mcp.openvan.camp/mcp tools" "$(echo "$hosted" | jq -r '.result.tools | length' 2>/dev/null)" "$TOOLS"
+# The hosted server runs from a separate checkout on the production host and is restarted by hand,
+# so it can lag behind npm — compare its version too.
+hosted_version=$(curl -s -X POST https://mcp.openvan.camp/mcp -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' -d "$MCP_INIT" | sed -n 's/^data: //p;/^{/p' | head -1 | jq -r '.result.serverInfo.version' 2>/dev/null)
+check "hosted https://mcp.openvan.camp/mcp version" "$hosted_version" "$MCP_VERSION"
 
 (cd "$WORK" && npm init -y >/dev/null 2>&1 && npm install --silent "@openvancamp/sdk@$SDK_VERSION" >/dev/null 2>&1)
 sdk=$(cd "$WORK" && node -e '
