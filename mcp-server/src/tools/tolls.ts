@@ -47,7 +47,7 @@ export const estimateRouteTollsInput = {
     .array(z.string().min(1).max(120))
     .min(2)
     .max(10)
-    .describe('2-10 place names in travel order: cities, addresses or countries (a country means its capital), e.g. ["Rome", "Paris"].'),
+    .describe('2-10 place names in travel order: cities or countries (a country means its capital), e.g. ["Rome", "Paris"].'),
   vehicle_class: VehicleClass,
   locale: z.string().optional().describe("Language of bridge/section names: en, ru, de, fr, es, pt, tr."),
 };

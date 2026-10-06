@@ -10,6 +10,9 @@ const FuelCountrySchema = z.object({
   // дизель в USD, бензин в VES. Без этой карты 428 VES считались как 428 USD.
   currencies: z.record(z.string(), z.string()).optional(),
   unit: z.string(),
+  // Единица каждого грейда: страновая unit — запасная. В Колумбии страна «liter», а бензин
+  // и дизель за галлон; газ бывает за kg или m3. Без этой карты цена за галлон шла как литровая.
+  units: z.record(z.string(), z.string()).optional(),
   prices: z
     .record(z.string(), z.number().nullable())
     .optional(),
@@ -32,6 +35,11 @@ type FuelCountry = z.infer<typeof FuelCountrySchema>;
 /** Валюта конкретного грейда, со страновой как запасной. */
 function currencyOf(c: FuelCountry, fuelType: string): string {
   return c.currencies?.[fuelType] ?? c.currency;
+}
+
+/** Единица конкретного грейда (liter, gallon, imperial_gallon, kg, m3), со страновой как запасной. */
+function unitOf(c: FuelCountry, fuelType: string): string {
+  return c.units?.[fuelType] ?? c.unit;
 }
 
 const FUEL_TYPES = [
@@ -91,25 +99,31 @@ function toEur(
   return priceLocal / rate;
 }
 
-const LITERS_PER_GALLON = 3.78541;
-
 /**
- * Whether a unit string denotes US gallons. The fuel API reports prices per
- * "liter" for most countries and per "gallon" for a handful (US, EC, DO, HN,
- * SV).
+ * Liters per volume unit. Mirrors FuelGradeCatalog::literFactors() on the server.
+ * The imperial gallon (Grenada, Cayman Islands…) is 20% larger than the US one.
+ * kg and m3 (LPG/CNG in some countries) are not volume units and are absent.
  */
-function isGallon(unit: string): boolean {
-  return unit.toLowerCase().includes("gal");
+const LITERS_PER_UNIT: Record<string, number> = {
+  liter: 1,
+  gallon: 3.78541,
+  imperial_gallon: 4.54609,
+};
+
+/** Whether the unit is a volume unit (price comparable per liter). */
+function isVolumetric(unit: string): boolean {
+  return LITERS_PER_UNIT[unit] !== undefined;
 }
 
 /**
- * Normalize an EUR price (expressed in the country's native unit) to EUR per
+ * Normalize an EUR price (expressed in the grade's native unit) to EUR per
  * liter, so gallon-priced and liter-priced countries can be sorted and
- * compared on the same scale. Returns NaN if the input is NaN.
+ * compared on the same scale. Returns NaN if the input is NaN or the unit is
+ * not a volume unit (gas priced per kg or m3 cannot be compared per liter).
  */
 function toEurPerLiter(priceEur: number, unit: string): number {
-  if (isNaN(priceEur)) return NaN;
-  return isGallon(unit) ? priceEur / LITERS_PER_GALLON : priceEur;
+  if (isNaN(priceEur) || !isVolumetric(unit)) return NaN;
+  return priceEur / LITERS_PER_UNIT[unit];
 }
 
 async function fetchFuelAndRates() {
@@ -177,7 +191,7 @@ export async function getFuelPrices({
     content: [
       {
         type: "text" as const,
-        text: `Fuel prices (showing 20 of ${Object.keys(fuel.data).length} countries, per liter):\n\n${summary}\n\nPass country_code to get detailed data for one country.`,
+        text: `Fuel prices (showing 20 of ${Object.keys(fuel.data).length} countries, local units; ≈ EUR per liter in brackets):\n\n${summary}\n\nPass country_code to get detailed data for one country.`,
       },
     ],
   };
@@ -189,11 +203,11 @@ function formatCountry(c: FuelCountry, rates: Record<string, number>): string {
   const headerCurrency = used.size > 1 ? "mixed currencies" : c.currency;
   const isEur = headerCurrency.toUpperCase() === "EUR";
   const lines = [
-    `${c.country_name} (${c.country_code}) — prices per ${c.unit} in ${headerCurrency}${isEur ? "" : " (≈ EUR shown in brackets)"}`,
+    `${c.country_name} (${c.country_code}) — prices in local units, ${headerCurrency}${isEur ? "" : " (≈ EUR per liter shown in brackets)"}`,
   ];
   FUEL_TYPES.forEach((fuelType) => {
     const cur = currencyOf(c, fuelType);
-    lines.push(`  ${FUEL_TYPE_LABELS[fuelType].padEnd(17)} ${fmtPair(prices[fuelType], cur, rates, cur.toUpperCase() === "EUR")}`);
+    lines.push(`  ${FUEL_TYPE_LABELS[fuelType].padEnd(17)} ${fmtPair(prices[fuelType], cur, unitOf(c, fuelType), rates, cur.toUpperCase() === "EUR")}`);
   });
   if (c.fetched_at) lines.push(`  Updated:  ${c.fetched_at}`);
   if (c.sources?.length) lines.push(`  Sources:  ${c.sources.join(", ")}`);
@@ -204,7 +218,7 @@ function formatCountryRow(c: FuelCountry, rates: Record<string, number>): string
   const p = c.prices ?? {};
   const pair = (t: string) => {
     const cur = currencyOf(c, t);
-    return fmtPair(p[t], cur, rates, cur.toUpperCase() === "EUR");
+    return fmtPair(p[t], cur, unitOf(c, t), rates, cur.toUpperCase() === "EUR");
   };
   const diesel = pair("diesel");
   const gasoline = pair("gasoline");
@@ -215,14 +229,20 @@ function formatCountryRow(c: FuelCountry, rates: Record<string, number>): string
 function fmtPair(
   v: number | null | undefined,
   currency: string,
+  unit: string,
   rates: Record<string, number>,
   isEur: boolean
 ): string {
   if (v == null) return "—";
-  if (isEur) return `${v.toFixed(3)} EUR`;
-  const eur = toEur(v, currency, rates);
-  if (isNaN(eur)) return `${v.toFixed(3)} ${currency}`;
-  return `${v.toFixed(3)} ${currency} (≈${eur.toFixed(3)} EUR)`;
+  const local = `${v.toFixed(3)} ${currency}/${unit}`;
+  if (!isVolumetric(unit)) {
+    const eurPerUnit = toEur(v, currency, rates);
+    return isEur || isNaN(eurPerUnit) ? local : `${local} (≈${eurPerUnit.toFixed(3)} EUR/${unit})`;
+  }
+  if (isEur && unit === "liter") return local;
+  const eurPerLiter = toEurPerLiter(toEur(v, currency, rates), unit);
+  if (isNaN(eurPerLiter)) return local;
+  return `${local} (≈${eurPerLiter.toFixed(3)} EUR/liter)`;
 }
 
 function fmt(v: number | null | undefined): string {
@@ -242,7 +262,7 @@ export const compareFuelPricesInput = {
   fuel_type: z
     .enum(FUEL_TYPES)
     .default("diesel")
-    .describe("Fuel type to compare. Uses the same keys as /api/fuel/prices prices."),
+    .describe("Fuel type to compare. e.g. gasoline, diesel, lpg, cng, e85."),
 };
 
 export async function compareFuelPrices({
@@ -259,7 +279,8 @@ export async function compareFuelPrices({
     cur: string;
     priceLocal: number | null | undefined;
     priceEur: number; // EUR in the country's native unit; NaN if conversion unavailable
-    priceEurPerLiter: number; // EUR per liter — normalized basis for sorting/comparison
+    unit: string; // native unit of this grade (liter, gallon, imperial_gallon, kg, m3)
+    priceEurPerLiter: number; // EUR per liter — normalized basis for sorting/comparison; NaN for kg/m3
   };
 
   const rows: Row[] = country_codes
@@ -274,7 +295,8 @@ export async function compareFuelPrices({
         cur,
         priceLocal,
         priceEur,
-        priceEurPerLiter: toEurPerLiter(priceEur, c.unit),
+        unit: unitOf(c, fuel_type),
+        priceEurPerLiter: toEurPerLiter(priceEur, unitOf(c, fuel_type)),
       };
     })
     .filter((r) => r.priceLocal != null);
@@ -306,12 +328,15 @@ export async function compareFuelPrices({
   const table = rows
     .map((r) => {
       const isEur = r.cur.toUpperCase() === "EUR";
-      const local = `${fmt(r.priceLocal)} ${r.cur}/${r.c.unit}`;
-      if (isEur) {
+      const local = `${fmt(r.priceLocal)} ${r.cur}/${r.unit}`;
+      if (isEur && r.unit === "liter") {
         return `  ${r.c.country_code}  ${r.c.country_name.padEnd(25)}  ${local}`;
       }
       if (isNaN(r.priceEur)) {
         return `  ${r.c.country_code}  ${r.c.country_name.padEnd(25)}  ${local}  (⚠️ currency not in rates table)`;
+      }
+      if (!isVolumetric(r.unit)) {
+        return `  ${r.c.country_code}  ${r.c.country_name.padEnd(25)}  ${local}  (priced per ${r.unit} — not comparable per liter)`;
       }
       return `  ${r.c.country_code}  ${r.c.country_name.padEnd(25)}  ${local}  ≈ ${r.priceEurPerLiter.toFixed(3)} EUR/liter`;
     })
@@ -319,8 +344,8 @@ export async function compareFuelPrices({
 
   const cheapest = rows[0];
   const cheapestLine = isNaN(cheapest.priceEurPerLiter)
-    ? `Cheapest (by local price only, EUR conversion unavailable): ${cheapest.c.country_name} at ${fmt(cheapest.priceLocal)} ${cheapest.cur}/${cheapest.c.unit}.`
-    : `Cheapest: ${cheapest.c.country_name} at ≈ ${cheapest.priceEurPerLiter.toFixed(3)} EUR/liter${cheapest.cur.toUpperCase() !== "EUR" ? ` (${fmt(cheapest.priceLocal)} ${cheapest.cur}/${cheapest.c.unit})` : ""}.`;
+    ? `Cheapest (by local price only, EUR conversion unavailable): ${cheapest.c.country_name} at ${fmt(cheapest.priceLocal)} ${cheapest.cur}/${cheapest.unit}.`
+    : `Cheapest: ${cheapest.c.country_name} at ≈ ${cheapest.priceEurPerLiter.toFixed(3)} EUR/liter${cheapest.cur.toUpperCase() !== "EUR" ? ` (${fmt(cheapest.priceLocal)} ${cheapest.cur}/${cheapest.unit})` : ""}.`;
 
   const footer = ratesUpdatedAt ? `\nCurrency rates: openvan.camp (updated ${ratesUpdatedAt}).` : "";
 
@@ -346,7 +371,7 @@ export const findCheapestFuelInput = {
   fuel_type: z
     .enum(FUEL_TYPES)
     .default("diesel")
-    .describe("Fuel type. Uses the same keys as /api/fuel/prices prices."),
+    .describe("Fuel type. e.g. gasoline, diesel, lpg, cng, e85."),
   limit: z
     .number()
     .int()
@@ -378,7 +403,8 @@ export async function findCheapestFuel({
         cur,
         priceLocal,
         priceEur,
-        priceEurPerLiter: toEurPerLiter(priceEur, c.unit),
+        unit: unitOf(c, fuel_type),
+        priceEurPerLiter: toEurPerLiter(priceEur, unitOf(c, fuel_type)),
       };
     })
     .filter((r) => r.priceLocal != null && !isNaN(r.priceEurPerLiter))
@@ -400,8 +426,8 @@ export async function findCheapestFuel({
   const table = rows
     .map((r, i) => {
       const isEur = r.cur.toUpperCase() === "EUR";
-      const local = `${fmt(r.priceLocal)} ${r.cur}/${r.c.unit}`;
-      if (isEur) {
+      const local = `${fmt(r.priceLocal)} ${r.cur}/${r.unit}`;
+      if (isEur && r.unit === "liter") {
         return `  ${i + 1}. ${r.c.country_code}  ${r.c.country_name.padEnd(25)}  ${local}`;
       }
       return `  ${i + 1}. ${r.c.country_code}  ${r.c.country_name.padEnd(25)}  ≈ ${r.priceEurPerLiter.toFixed(3)} EUR/liter  (${local})`;

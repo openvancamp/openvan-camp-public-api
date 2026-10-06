@@ -84,13 +84,13 @@ npx -y @openvancamp/mcp-server
 | `get_fuel_prices` | Current retail fuel prices per country |
 | `compare_fuel_prices` | Compare one fuel type across 2–10 countries |
 | `find_cheapest_fuel` | Top cheapest countries by fuel type, filterable by region |
-| `get_vansky_weather` | VanSky score, solar yield, 7-day forecast for one country |
-| `list_vansky_top` | Top N countries by VanSky score today |
+| `get_country_travel_weather` | Campervan travel weather score (0-100), solar yield, 7-day forecast for one country |
+| `list_best_weather_countries` | Top N countries with the best travel weather today |
 | `list_events` | Vanlife events (expos, festivals, meetups) with filters |
 | `get_event` | Details for one event by slug |
 | `search_stories` | Aggregated vanlife news (7 languages, 400+ sources) |
-| `compare_vanbasket` | Food price index comparison between two countries |
-| `get_vanbasket` | Food price index details for one country |
+| `compare_food_prices` | Food price index comparison between two countries |
+| `get_country_food_prices` | Food price index details for one country |
 | `get_currency_rate` | Currency conversion between 150+ currencies |
 | `check_visa_rules` | Entry rules for one passport and destination, with confidence and source |
 | `get_route_visa_rules` | Visa rules for a whole route, up to 10 passports, plus the tightest leg |
@@ -98,7 +98,7 @@ npx -y @openvancamp/mcp-server
 | `list_license_plate_countries` | Countries with license plates: international code, regions, example plate |
 | `get_license_plate_country` | Plate format and every region code of one country |
 | `check_license_plate` | Validate a plate number and resolve its region code |
-| `get_license_plate_image` | The plate as an image (PNG inline + SVG/PNG links); any text with `custom` |
+| `get_license_plate_image` | Illustrative image of a standard civilian plate (PNG inline + SVG/PNG links) |
 | `get_toll_rates` | Toll reference for one country: per-km rates by vehicle class, vignettes, bridges and tunnels |
 | `estimate_route_tolls` | Toll cost for a route of 2–10 place names as a EUR range, flags partial results |
 | `get_holidays` | Public holidays, school holidays (with ISO 3166-2 regions) and peak traffic days for up to 400 days |
@@ -110,6 +110,8 @@ npx -y @openvancamp/mcp-server
 All tools are `readOnlyHint: true` and `openWorldHint: false`. Safe to allow by default.
 
 ---
+
+> **Renamed in 0.7.0:** `get_vansky_weather` → `get_country_travel_weather`, `list_vansky_top` → `list_best_weather_countries`, `get_vanbasket` → `get_country_food_prices`, `compare_vanbasket` → `compare_food_prices`. The hosted server at `mcp.openvan.camp` still accepts the old names.
 
 ## Example prompts
 

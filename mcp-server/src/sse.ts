@@ -20,11 +20,21 @@ import { randomUUID } from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 
 import { VERSION } from "./config.js";
-import { createServer } from "./server.js";
+import { createServer, LEGACY_TOOL_NAMES } from "./server.js";
 import { extractToolCalls, logToolCall } from "./telemetry.js";
 
 const HOST = process.env.OPENVAN_MCP_HOST ?? "127.0.0.1";
 const PORT = Number(process.env.OPENVAN_MCP_PORT ?? 4800);
+
+/** Старое имя инструмента в tools/call → новое (см. LEGACY_TOOL_NAMES). Телеметрия видит исходное. */
+function renameLegacyToolCalls(body: unknown): void {
+  for (const message of Array.isArray(body) ? body : [body]) {
+    const params = (message as { method?: unknown; params?: { name?: unknown } } | null)?.params;
+    if ((message as { method?: unknown })?.method === "tools/call" && params && typeof params.name === "string") {
+      params.name = LEGACY_TOOL_NAMES[params.name] ?? params.name;
+    }
+  }
+}
 
 async function main() {
   const app = express();
@@ -78,6 +88,7 @@ async function main() {
         ?.split(",")[0]
         ?.trim() || req.socket.remoteAddress || undefined;
     const startedAt = Date.now();
+    renameLegacyToolCalls(req.body);
 
     const recordToolCalls = (ok: boolean): void => {
       if (toolCalls.length === 0) {

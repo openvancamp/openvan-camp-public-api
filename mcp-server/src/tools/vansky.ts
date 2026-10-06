@@ -86,7 +86,7 @@ export async function getVanSkyWeather({ country_code }: { country_code: string 
 }
 
 // ------------------------------------------------------------------
-// list_vansky_top — top N countries by van_score today
+// list_best_weather_countries — top N countries by van_score today
 // ------------------------------------------------------------------
 
 export const listVanSkyTopInput = {

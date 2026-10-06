@@ -135,7 +135,7 @@ export async function getLicensePlateCountry({ country, locale }: { country: str
       c.size_mm ? `Size: ${c.size_mm.join(" × ")} mm` : null,
       c.description ?? null,
       c.example?.image ? `Example ${c.example.formatted}: ${c.example.image.svg}` : null,
-      types.length > 1 ? `Plate types (pass the key as type to check_license_plate / get_license_plate_image):\n${types.join("\n")}` : null,
+      types.length > 1 ? `Plate types (pass the key as type to check_license_plate):\n${types.join("\n")}` : null,
       regions.length ? `Region codes (${regions.length} regions):\n${regions.join("\n")}` : "The region is not shown on plates of this country.",
       c.url ? `More: ${c.url}` : null,
     ]
@@ -190,7 +190,7 @@ export async function checkLicensePlate({
         ? `${plate} is a valid ${country.toUpperCase()} plate format${v.type ? ` (type ${v.type})` : ""}.`
         : `${plate} does not match the ${country.toUpperCase()} plate format${v.type ? ` for type ${v.type}` : ""}.`,
       v.region_name ? `Region code ${v.region} = ${v.region_name}${v.region_iso3166_2 ? ` (${v.region_iso3166_2})` : ""}. The code shows where the vehicle was registered, not the owner or where it is now.` : null,
-      v.image ? `Image: ${v.image.svg}` : null,
+      v.image && !type ? `Image: ${v.image.svg}` : null,
     ]
       .filter(Boolean)
       .join("\n") + ATTRIBUTION_FOOTER
@@ -199,42 +199,31 @@ export async function checkLicensePlate({
 
 export const getLicensePlateImageInput = {
   country: countryCode,
-  number: z.string().describe("Plate number without the region, or any text with custom=true."),
+  number: z.string().describe("Plate number without the region, in the country's standard format."),
   region: z.string().optional().describe("Region code if the country shows one."),
-  type: plateType,
-  custom: z.boolean().optional().describe("Draw any text (e.g. a name) in the plate layout instead of requiring a real format."),
 };
 
 export async function getLicensePlateImage({
   country,
   number,
   region,
-  type,
-  custom,
 }: {
   country: string;
   number: string;
   region?: string;
-  type?: string;
-  custom?: boolean;
 }) {
   const base = new URL(`/api/plates/${country.toLowerCase()}/`, BASE_URL);
   const query = new URLSearchParams({ number, source: SOURCE_TAG });
   if (region) query.set("region", region);
-  if (type) query.set("type", type);
-  if (custom) query.set("custom", "1");
 
   const svgUrl = new URL(`plate.svg?${query}`, base).toString();
   const pngUrl = new URL(`plate.png?${query}&width=800`, base).toString();
   const response = await fetch(pngUrl, { headers: { "User-Agent": USER_AGENT } });
 
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { error?: string } | null;
-    if (type && body?.error === "invalid_type") return unknownType(country, type);
-
     const reason =
       response.status === 422
-        ? `The number does not match the country format${type ? ` for type ${type} (each type has its own format; get_license_plate_country shows an example)` : ""} — pass custom=true to draw any text.`
+        ? "The number does not match the country's standard format (get_license_plate_country shows an example)."
         : response.status === 403
           ? "Plate images of this country are not available (typeface license)."
           : `HTTP ${response.status}.`;

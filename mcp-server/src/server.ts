@@ -100,6 +100,18 @@ function withAttribution<A extends any[], R>(handler: (...args: A) => Promise<R>
 }
 
 /**
+ * Старые имена инструментов (до 0.7.0) → новые. В tools/list их нет: имена с внутренними
+ * брендами (VanSky, VanBasket) модель не понимает, и ревью ChatGPT Apps их отклонило.
+ * Скрипты, где имя записано жёстко, продолжают работать — sse.ts подменяет имя на входе.
+ */
+export const LEGACY_TOOL_NAMES: Record<string, string> = {
+  get_vansky_weather: "get_country_travel_weather",
+  list_vansky_top: "list_best_weather_countries",
+  get_vanbasket: "get_country_food_prices",
+  compare_vanbasket: "compare_food_prices",
+};
+
+/**
  * Factory shared between stdio (dist/index.js) and HTTP (dist/sse.js) entry points.
  */
 export function createServer(): McpServer {
@@ -114,7 +126,7 @@ export function createServer(): McpServer {
     {
       title: "Get Fuel Prices",
       description:
-        "Current retail fuel prices for all API-supported countries. Supports the same price keys as /api/fuel/prices, including gasoline, diesel, LPG, CNG, E85, kerosene and grade variants. Pass country_code to get one country in detail; omit it for a summary list.",
+        "Current retail fuel prices for all API-supported countries. Covers gasoline, diesel, LPG, CNG, E85, kerosene and grade variants. Pass country_code to get one country in detail; omit it for a summary list.",
       inputSchema: getFuelPricesInput,
       annotations: readOnlyAnnotations("Get Fuel Prices"),
     },
@@ -143,26 +155,26 @@ export function createServer(): McpServer {
     withAttribution(findCheapestFuel)
   );
 
-  // VanSky weather
+  // Travel weather
   server.registerTool(
-    "get_vansky_weather",
+    "get_country_travel_weather",
     {
-      title: "Get VanSky Weather Score",
+      title: "Travel Weather In A Country",
       description:
-        "Get VanSky vanlife weather suitability score (0-100) for a country: van_score, sleep_score, solar yield, driving conditions, awning safety, condensation risk, 7-day forecast.",
+        "How suitable today's weather in a country is for travelling and sleeping in a campervan, as a 0-100 score: overall travel score, sleep score, solar panel yield, driving conditions, awning safety, condensation risk and a 7-day forecast.",
       inputSchema: getVanSkyWeatherInput,
-      annotations: readOnlyAnnotations("Get VanSky Weather Score"),
+      annotations: readOnlyAnnotations("Travel Weather In A Country"),
     },
     withAttribution(getVanSkyWeather)
   );
   server.registerTool(
-    "list_vansky_top",
+    "list_best_weather_countries",
     {
-      title: "List Top VanSky Countries",
+      title: "Countries With The Best Travel Weather",
       description:
-        "List the top N countries with the highest VanSky van-travel suitability score today.",
+        "List the N countries where today's weather is best for travelling by campervan, highest 0-100 travel score first.",
       inputSchema: listVanSkyTopInput,
-      annotations: readOnlyAnnotations("List Top VanSky Countries"),
+      annotations: readOnlyAnnotations("Countries With The Best Travel Weather"),
     },
     withAttribution(listVanSkyTop)
   );
@@ -204,9 +216,9 @@ export function createServer(): McpServer {
     withAttribution(searchStories)
   );
 
-  // VanBasket (food price index)
+  // Food price index
   server.registerTool(
-    "compare_vanbasket",
+    "compare_food_prices",
     {
       title: "Compare Food Prices",
       description:
@@ -217,11 +229,11 @@ export function createServer(): McpServer {
     withAttribution(compareVanBasket)
   );
   server.registerTool(
-    "get_vanbasket",
+    "get_country_food_prices",
     {
       title: "Get Food Price Index",
       description:
-        "Get VanBasket food price index details for one country.",
+        "Food price index for one country (world average = 100): how expensive groceries are there, with its yearly history.",
       inputSchema: getVanBasketInput,
       annotations: readOnlyAnnotations("Get Food Price Index"),
     },
@@ -390,7 +402,7 @@ export function createServer(): McpServer {
     {
       title: "Check A License Plate",
       description:
-        "Validate a plate number against the country's format (look-alike letters are normalized) and say which region its code belongs to. Pass type for special plates (e.g. Russian diplomatic, police). Never identifies the owner or the vehicle's location.",
+        "Validate a plate number against the country's format (look-alike letters are normalized) and say which region its code belongs to. Pass type to check against a specific plate type's format. Never identifies the owner or the vehicle's location.",
       inputSchema: checkLicensePlateInput,
       annotations: readOnlyAnnotations("Check A License Plate"),
     },
@@ -401,7 +413,7 @@ export function createServer(): McpServer {
     {
       title: "License Plate Image",
       description:
-        "Draw a license plate as an image (PNG shown inline, plus SVG/PNG links) exactly as openvan.camp renders it. type picks the plate kind, e.g. diplomatic (red), police (blue), military (black), taxi_bus (yellow) on Russian plates; each type has its own number format. custom=true draws any text, e.g. a name, in the plate layout.",
+        "Draw an illustrative image of a country's standard civilian license plate (PNG shown inline, plus SVG/PNG links). The number must match the country's standard format. Official, police, military and diplomatic plates are not drawn.",
       inputSchema: getLicensePlateImageInput,
       annotations: readOnlyAnnotations("License Plate Image"),
     },

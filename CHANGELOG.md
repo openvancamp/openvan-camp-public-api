@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-06
+
+### Changed — MCP server v0.7.0
+- **Clearer tool names** (internal brand names replaced with what the tool does):
+  `get_vansky_weather` → `get_country_travel_weather`, `list_vansky_top` → `list_best_weather_countries`,
+  `get_vanbasket` → `get_country_food_prices`, `compare_vanbasket` → `compare_food_prices`.
+  The hosted server at `mcp.openvan.camp` still accepts the old names; update scripts that call them.
+- `get_license_plate_image` draws only a country's standard civilian plate: the `type` and `custom` parameters
+  are removed. `check_license_plate` still validates any plate type. The REST API is unchanged.
+- `estimate_route_tolls`: `waypoints` are cities or countries, not street addresses.
+- Fuel tools: price units and currencies per fuel grade (imperial gallon, kg/m³ for gas grades are no longer
+  compared per liter).
+
 ## 2026-10-04
 
 ### Added

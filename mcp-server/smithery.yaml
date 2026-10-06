@@ -1,7 +1,7 @@
 name: openvan-travel
 displayName: OpenVan Travel Data
 description: Free vanlife & RV travel data for AI agents — fuel prices (160+ countries), toll roads, holidays and peak traffic days, travel hazards and active fires, power plugs, customs rules, VanSky weather scores, VanBasket food price index, currency rates, events, news stories, visa and vehicle-import rules, license plates of the world. 25 read-only tools. No auth. CC BY 4.0.
-version: 0.6.2
+version: 0.7.0
 license: MIT
 homepage: https://openvan.camp/ai
 repository:
@@ -63,13 +63,13 @@ tools:
   - get_fuel_prices
   - compare_fuel_prices
   - find_cheapest_fuel
-  - get_vansky_weather
-  - list_vansky_top
+  - get_country_travel_weather
+  - list_best_weather_countries
   - list_events
   - get_event
   - search_stories
-  - compare_vanbasket
-  - get_vanbasket
+  - compare_food_prices
+  - get_country_food_prices
   - get_currency_rate
   - check_visa_rules
   - get_route_visa_rules
