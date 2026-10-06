@@ -19,17 +19,30 @@ const StoriesResponseSchema = z.object({
     .optional(),
 });
 
+const SUMMARY_MAX = 300;
+
+/** Короткое резюме: до SUMMARY_MAX знаков, по границе предложения или слова. */
+function shortSummary(summary: string | null | undefined): string {
+  const text = (summary ?? "").trim();
+  if (text.length <= SUMMARY_MAX) return text;
+  const cut = text.slice(0, SUMMARY_MAX);
+  const sentenceEnd = cut.lastIndexOf(". ");
+  if (sentenceEnd > SUMMARY_MAX / 2) return cut.slice(0, sentenceEnd + 1);
+  return `${cut.slice(0, cut.lastIndexOf(" "))}…`;
+}
+
 export const searchStoriesInput = {
-  search: z.string().optional().describe("Full-text search in story title."),
+  search: z.string().max(100).optional().describe("Words to look for in story headlines."),
   category: z
-    .string()
+    .enum(["law", "ban", "opening", "closing", "incident", "industry", "lifestyle", "builds", "festival", "expo", "review", "other"])
     .optional()
-    .describe("Category slug, e.g. camping, travel, gear, festival, industry."),
+    .describe("Story category."),
   country: z.string().length(2).optional().describe("ISO 3166-1 alpha-2 country code."),
   locale: z
     .enum(["en", "ru", "de", "fr", "es", "pt", "tr"])
-    .default("en"),
-  limit: z.number().int().min(1).max(50).default(10),
+    .default("en")
+    .describe("Language of headlines and summaries."),
+  limit: z.number().int().min(1).max(20).default(10),
 };
 
 export async function searchStories(args: {
@@ -62,7 +75,7 @@ export async function searchStories(args: {
 
   const lines = stories.map(
     (s) =>
-      `• ${s.title}\n    ${s.category?.name ?? ""} · ${(s.countries ?? []).map((c) => c.code).join(", ")} · ${s.first_published_at ?? ""}\n    ${s.summary ?? ""}\n    ${s.url ?? ""}`
+      `• ${s.title}\n    ${s.category?.name ?? ""} · ${(s.countries ?? []).map((c) => c.code).join(", ")} · ${s.first_published_at ?? ""}\n    ${shortSummary(s.summary)}\n    ${s.url ?? ""}`
   );
 
   const header = pagination

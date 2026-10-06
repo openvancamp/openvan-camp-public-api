@@ -209,7 +209,7 @@ export function createServer(): McpServer {
     {
       title: "Search Vanlife News",
       description:
-        "Search aggregated vanlife news stories (7 languages, 400+ sources). Filter by search query, category, country, locale.",
+        "Search recent news about campervans, motorhomes and road travel collected by OpenVan.camp from public news sources. Returns for each story only a headline, a short summary of up to 300 characters, date, category, countries and a link to the story page on openvan.camp, which credits the original publishers. Never returns full article text. Filter by words in the headline, category, country and language.",
       inputSchema: searchStoriesInput,
       annotations: readOnlyAnnotations("Search Vanlife News"),
     },

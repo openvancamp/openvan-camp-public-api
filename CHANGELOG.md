@@ -2,6 +2,11 @@
 
 ## 2026-10-06
 
+### Changed — MCP server v0.7.1
+- `search_stories`: `category` is now a fixed list of the real categories (the old description listed slugs that never
+  existed); each summary is cut to 300 characters; `limit` max 20. The tool returns only a headline, a short summary
+  and a link to the story page on openvan.camp, which credits the original publishers — never full article text.
+
 ### Changed — MCP server v0.7.0
 - **Clearer tool names** (internal brand names replaced with what the tool does):
   `get_vansky_weather` → `get_country_travel_weather`, `list_vansky_top` → `list_best_weather_countries`,

@@ -88,7 +88,7 @@ npx -y @openvancamp/mcp-server
 | `list_best_weather_countries` | Top N countries with the best travel weather today |
 | `list_events` | Vanlife events (expos, festivals, meetups) with filters |
 | `get_event` | Details for one event by slug |
-| `search_stories` | Aggregated vanlife news (7 languages, 400+ sources) |
+| `search_stories` | Vanlife news: headline, short summary and link to the story page on openvan.camp (7 languages) |
 | `compare_food_prices` | Food price index comparison between two countries |
 | `get_country_food_prices` | Food price index details for one country |
 | `get_currency_rate` | Currency conversion between 150+ currencies |
