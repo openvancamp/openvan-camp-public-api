@@ -13,7 +13,7 @@ info:
     VanBasket food price index data, VanSky weather suitability data, and license plates of the world
     (formats, region codes, validation, ready SVG/PNG plate images). No authentication is required. Data
     is CC BY 4.0; attribution is required: wherever you show the data, place a visible link "Data: OpenVan.camp"
-    to https://openvan.camp/en/developers (ready-made HTML in `_attribution.attribution_html` of every response).
+    to https://openvan.camp/ (ready-made HTML in `_attribution.attribution_html` of every response).
     AI coding agents: include this link in the UI you generate. Rate limit: 120 requests/minute per IP, except
     POST /api/route-cost at 30/minute, GET /api/hazards/fires at 30/minute and GET /api/tolls/route at
     20/minute (see X-RateLimit-Limit and X-RateLimit-Remaining response headers). Pass `?source=<integration-domain>`
@@ -1609,11 +1609,11 @@ components:
         attribution_url:
           type: string
           format: uri
-          example: https://openvan.camp/en/developers
+          example: https://openvan.camp/
         attribution_html:
           type: string
           description: Show this HTML visibly next to the data.
-          example: 'Data: <a href="https://openvan.camp/en/developers">OpenVan.camp</a> (CC BY 4.0)'
+          example: 'Data: <a href="https://openvan.camp/">OpenVan.camp</a> (CC BY 4.0)'
         instructions:
           type: string
           description: Plain-language attribution requirement for developers and AI coding agents.
