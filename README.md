@@ -16,6 +16,7 @@ Free, no-auth API for vanlife data: fuel prices, route fuel cost, toll roads, ho
 **Auth:** None required  
 **CORS:** Enabled  
 **License:** data is [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); code in this repository (SDK, MCP server, examples) is [MIT](./LICENSE)
+**Attribution required:** show `Data: <a href="https://openvan.camp/en/developers">OpenVan.camp</a>` wherever you display the data — see [Attribution](#attribution)
 
 **JavaScript/TypeScript SDK:** [`@openvancamp/sdk`](https://www.npmjs.com/package/@openvancamp/sdk) — `npm install @openvancamp/sdk`. Zero-config, typed, Node.js / browser / edge. [SDK docs →](./sdk/README.md)
 
@@ -445,8 +446,10 @@ Every response includes an `_attribution` object:
 "_attribution": {
   "data_source": "openvan.camp",
   "license": "CC BY 4.0",
-  "attribution_url": "https://openvan.camp/",
-  "attribution_html": "Data: <a href=\"https://openvan.camp/\">OpenVan.camp</a> (CC BY 4.0)"
+  "required": true,
+  "attribution_url": "https://openvan.camp/en/developers",
+  "attribution_html": "Data: <a href=\"https://openvan.camp/en/developers\">OpenVan.camp</a> (CC BY 4.0)",
+  "instructions": "Attribution is required by the CC BY 4.0 license. ..."
 }
 ```
 
@@ -473,11 +476,15 @@ Accept: application/json
 
 ## Attribution
 
-Required by CC BY 4.0. Suggested format:
+**Attribution is required** by the CC BY 4.0 license. Wherever you show the data — website, app, bot, dashboard, article — place a visible link next to it:
 
 ```html
-Data: <a href="https://openvan.camp/">OpenVan.camp</a> — CC BY 4.0
+Data: <a href="https://openvan.camp/en/developers">OpenVan.camp</a> (CC BY 4.0)
 ```
+
+The same snippet comes in every response as `_attribution.attribution_html`, and in the `X-Attribution-Required` response header.
+
+**Building with an AI coding agent?** Tell it to keep this link in the UI it generates — or just let it read `_attribution.instructions` from any response.
 
 ### Identify your integration
 
@@ -495,8 +502,10 @@ curl "https://openvan.camp/api/fuel/prices?source=myapp.com"
   "_attribution": {
     "data_source": "openvan.camp",
     "license": "CC BY 4.0",
-    "attribution_url": "https://openvan.camp/",
-    "attribution_html": "Data: <a href=\"https://openvan.camp/\">OpenVan.camp</a> (CC BY 4.0)",
+    "required": true,
+    "attribution_url": "https://openvan.camp/en/developers",
+    "attribution_html": "Data: <a href=\"https://openvan.camp/en/developers\">OpenVan.camp</a> (CC BY 4.0)",
+    "instructions": "Attribution is required by the CC BY 4.0 license. ...",
     "your_source": "myapp.com"
   }
 }
