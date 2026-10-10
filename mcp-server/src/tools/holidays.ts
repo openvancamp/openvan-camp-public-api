@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { apiGet, OpenVanApiError } from "../client.js";
 import { ATTRIBUTION_FOOTER } from "../config.js";
+import { SITE } from "../ui/bridge.js";
 
 /**
  * Праздники, школьные каникулы и пиковые дни на дорогах — /api/holidays/*.
@@ -86,10 +87,24 @@ export async function getHolidays({
     return `- ${dates} [${i.kind}] ${i.name}${local}${where}${traffic}`;
   });
 
-  return text(
+  const card = {
+    mode: "holidays",
+    country_code: data.country_code,
+    name: data.name,
+    from: data.from,
+    to: data.to,
+    items: data.items.map((i) => ({ kind: i.kind, start: i.start, end: i.end, name: i.name, category: (i as { category?: string }).category ?? null, nationwide: i.nationwide, regions: i.regions.map((r) => r.code), details: i.details })),
+    url: `${SITE}/${locale ?? "en"}/roadbook`,
+    locale: locale ?? null,
+    source: "OpenVan.camp (CC BY 4.0): Nager.Date, OpenHolidays API, Bison Futé",
+  };
+  return {
+    ...text(
     `Holidays in ${data.name} (${data.country_code}) ${data.from} – ${data.to}: ${data.count} entries.\n` +
       (lines.length ? lines.join("\n") : "Nothing in this period for the requested kinds.") +
       `\n\nTraffic colours (Bison Futé): green normal, orange heavy, red very heavy, black extremely heavy.` +
       ` Sources: Nager.Date (public), OpenHolidays API (school), Bison Futé (traffic).${ATTRIBUTION_FOOTER}`
-  );
+    ),
+    structuredContent: card,
+  };
 }

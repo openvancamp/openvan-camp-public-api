@@ -4,6 +4,8 @@ https://openvan.camp/en/developers
 License: CC BY 4.0 — attribution required
 """
 
+import time
+
 import requests
 
 API = "https://openvan.camp"
@@ -260,6 +262,28 @@ def route_fuel_cost(waypoints: list[str], cons: float = 10, fuel: str = "diesel"
     return r.json()
 
 
+def roadbook(places: list[str], inputs: dict | None = None, locale: str = "en") -> dict:
+    """The same roadbook people build at openvan.camp/en/roadbook: create, wait, open the page.
+    Identical requests return the same roadbook."""
+    created = requests.post(
+        f"{API}/api/roadbook/from-places",
+        json={"places": places, "locale": locale, "name": " — ".join(places), "inputs": inputs or {}},
+    ).json()
+    status = created["status"]
+    for _ in range(40):
+        if status in ("ready", "failed"):
+            break
+        time.sleep(1.5)
+        status = requests.get(f"{API}/api/roadbook/{created['code']}/status").json()["status"]
+    return {"status": status, "url": API + created["url"]}
+
+
+def city_weather(country: str, city_slug: str) -> dict:
+    """VanSky weather of one city: today and the coming 7 days."""
+    d = requests.get(f"{API}/api/vansky/weather/{country}/{city_slug}").json()["data"]
+    return {"city": d["city_name"], "today": d["van_score"], "week": d["week_score"]}
+
+
 def route_tolls(waypoints: list[str], vehicle_class: str = "van") -> dict:
     """Toll estimate in EUR. vehicle_class: car | van (up to 3.5 t) | heavy (over 3.5 t).
     Check `partial`: a country in `unknown_countries` has no data, it is not free."""
@@ -387,6 +411,12 @@ if __name__ == "__main__":
 
     print("\n=== Tolls Munich → Venice (campervan) ===")
     print(route_tolls(["Munich", "Venice"]))
+
+    print("\n=== Roadbook Munich → Venice (German passport, 10 l/100 km diesel) ===")
+    print(roadbook(["Munich", "Venice"], {"travelers": ["DE"], "cons": 10, "fuel": "diesel"}))
+
+    print("\n=== Weather in Málaga for a campervan ===")
+    print(city_weather("ES", "malaga"))
 
     print("\n=== Visa: Russian passport → Turkey ===")
     print(visa_check("RU", "TR"))

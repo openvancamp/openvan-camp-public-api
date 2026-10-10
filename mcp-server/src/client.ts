@@ -60,3 +60,27 @@ export async function apiGet<T = unknown>(
 
   return (await response.json()) as T;
 }
+
+/** POST с JSON-телом — для расчётов, которые API принимает только так (/api/route-cost). */
+export async function apiPost<T = unknown>(path: string, body: Record<string, unknown>): Promise<T> {
+  const url = new URL(path, BASE_URL);
+  url.searchParams.set("source", SOURCE_TAG);
+
+  const response = await fetch(url.toString(), {
+    method: "POST",
+    headers: { "User-Agent": USER_AGENT, Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    let err: unknown = null;
+    try {
+      err = await response.json();
+    } catch {
+      err = null;
+    }
+    throw new OpenVanApiError(`HTTP ${response.status} from ${url.pathname}`, response.status, url.toString(), err);
+  }
+
+  return (await response.json()) as T;
+}

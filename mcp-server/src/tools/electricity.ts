@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { apiGet, OpenVanApiError } from "../client.js";
 import { ATTRIBUTION_FOOTER } from "../config.js";
+import { SITE } from "../ui/bridge.js";
 
 /**
  * Розетки и электросеть — /api/electricity/*. Отдаём с источником значения и ответом Wikidata,
@@ -22,11 +23,16 @@ export async function getPowerPlugs({ country_code, locale }: { country_code: st
     const data = await apiGet<Record<string, unknown>>(`/api/electricity/countries/${cc}`, { locale });
     delete data._attribution;
 
-    return text(
+    const src = data.source as { name?: string } | undefined;
+    const card = { mode: "plugs", ...data, source_name: src?.name ?? null, url: `${SITE}/${locale ?? "en"}/roadbook`, locale: locale ?? null, source: "OpenVan.camp (CC BY 4.0)" };
+    return {
+      ...text(
       `Power plugs and mains electricity in ${cc}. plugs = IEC plug type letters (A–N), voltage in V, frequency in Hz. ` +
         `campsites = hook-up at European campsites (CEE17, the blue three-pin 16 A socket); applies only to the listed countries:\n\n` +
         `${JSON.stringify(data, null, 2)}${ATTRIBUTION_FOOTER}`
-    );
+      ),
+      structuredContent: card,
+    };
   } catch (e) {
     if (e instanceof OpenVanApiError && e.status === 404) {
       return text(`No electricity data for ${cc}.`, true);

@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { apiGet } from "../client.js";
+import { SITE } from "../ui/bridge.js";
 
 const RatesResponseSchema = z.object({
   success: z.boolean().optional(),
   rates: z.record(z.string(), z.number()),
   updated_at: z.string().optional(),
+  meta: z.object({ updated_at: z.string().optional() }).passthrough().optional(),
 });
 
 export const getCurrencyRateInput = {
@@ -43,6 +45,7 @@ export async function getCurrencyRate({
   }
 
   const rates = parsed.data.rates;
+  const updatedAt = parsed.data.meta?.updated_at ?? parsed.data.updated_at;
   // API returns rates relative to EUR. Compute cross-rate via EUR.
   const upperFrom = from.toUpperCase();
   const upperTo = to.toUpperCase();
@@ -64,8 +67,18 @@ export async function getCurrencyRate({
     content: [
       {
         type: "text" as const,
-        text: `${amount.toFixed(2)} ${upperFrom} = ${converted.toFixed(2)} ${upperTo}\n(1 ${upperFrom} = ${rate.toFixed(6)} ${upperTo}, updated ${parsed.data.updated_at ?? "recently"})`,
+        text: `${amount.toFixed(2)} ${upperFrom} = ${converted.toFixed(2)} ${upperTo}\n(1 ${upperFrom} = ${rate.toFixed(6)} ${upperTo}, updated ${updatedAt ?? "recently"})`,
       },
     ],
+    structuredContent: {
+      from: upperFrom,
+      to: upperTo,
+      amount,
+      rate,
+      converted,
+      updated_at: updatedAt ?? null,
+      url: `${SITE}/en/tools/currency-converter`,
+      source: "OpenVan.camp (CC BY 4.0)",
+    },
   };
 }

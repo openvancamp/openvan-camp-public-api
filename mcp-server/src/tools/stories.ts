@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { apiGet } from "../client.js";
+import { SITE } from "../ui/bridge.js";
 
 const StorySummarySchema = z.object({
   slug: z.string(),
@@ -82,5 +83,26 @@ export async function searchStories(args: {
     ? `${stories.length} of ${pagination.total} stories:`
     : `${stories.length} stories:`;
 
-  return { content: [{ type: "text" as const, text: `${header}\n\n${lines.join("\n\n")}` }] };
+  return {
+    content: [{ type: "text" as const, text: `${header}\n\n${lines.join("\n\n")}` }],
+    // В карточке — наша OG-картинка сюжета, а не фото источника: превью кешируют и
+    // индексируют, чужое фото там — риск по авторским правам (см. CLAUDE.md, Open Graph).
+    structuredContent: {
+      query: args.search ?? null,
+      total: pagination?.total ?? stories.length,
+      stories: stories.map((s) => ({
+        title: s.title,
+        summary: shortSummary(s.summary).slice(0, 180) || null,
+        category: s.category?.name ?? null,
+        countries: (s.countries ?? []).map((c) => c.code.toUpperCase()),
+        date: s.first_published_at ?? null,
+        sources: s.articles_count ?? null,
+        image: `${SITE}/storage/og-images/stories/${s.slug}-${args.locale}.png`,
+        url: s.url ?? `${SITE}/${args.locale}/news`,
+      })),
+      url: `${SITE}/${args.locale}/news`,
+      locale: args.locale,
+      source: "OpenVan.camp (CC BY 4.0)",
+    },
+  };
 }

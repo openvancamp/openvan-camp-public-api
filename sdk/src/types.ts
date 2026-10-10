@@ -285,3 +285,42 @@ export interface HolidaysOptions {
   kind?: "public" | "school" | "traffic";
   locale?: Locale;
 }
+
+// ─── Roadbook ────────────────────────────────────────────────────────────────
+
+export interface RoadbookInputs {
+  /** Passports of the travellers, ISO alpha-2. */
+  travelers?: string[];
+  /** Country of the vehicle plates, ISO alpha-2. */
+  plates?: string;
+  weight?: "le35" | "gt35";
+  vehicle_class?: "car" | "van" | "heavy";
+  fuel?: string;
+  /** Consumption, litres per 100 km. */
+  cons?: number;
+  /** Tank volume, litres. */
+  tank?: number;
+  /** Departure date, YYYY-MM-DD. */
+  date?: string;
+  /** Driving hours per day, 3–12. */
+  hpd?: number;
+  round?: boolean;
+  avoid_tolls?: boolean;
+  /** ISO 4217 code for the budget. */
+  currency?: string;
+}
+
+export interface RoadbookOptions {
+  locale?: Locale;
+  name?: string;
+  inputs?: RoadbookInputs;
+}
+
+export interface RoadbookCreated {
+  code: string;
+  /** Path of the roadbook page, e.g. /en/roadbook/wqhk8-munich-venice. */
+  url: string;
+  status: "pending" | "building" | "ready" | "failed";
+  points: Array<{ name: string; lat: number; lng: number; country_code: string | null }>;
+}
+

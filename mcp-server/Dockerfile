@@ -28,6 +28,8 @@ RUN npm install --omit=dev --no-audit --no-fund \
     && npm cache clean --force
 
 COPY --from=build /app/dist ./dist
+# Roadbook plan engine used by plan_road_trip (copy of openvan.camp resources/js, scripts/sync-engine.mjs)
+COPY engine ./engine
 COPY README.md LICENSE ./
 
 USER node

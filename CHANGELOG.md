@@ -1,5 +1,31 @@
 # Changelog
 
+## 2026-10-10
+
+### Added — MCP server v0.8.0
+- **Interactive cards** ([MCP Apps](https://modelcontextprotocol.io/docs/extensions/apps)) for every tool, rendered right in
+  the chat by Claude and ChatGPT: country and city weather with the best and toughest cities of the coming week and how the
+  index works, fuel and toll tables with a currency / vehicle-class switch, visa terms with a leave-by date, event and news
+  carousels, holidays, hazards, plugs, customs, license plates, and the whole trip. Hosts without MCP Apps get text as before.
+  Cards take the conversation language from the new optional `locale` argument.
+- **`plan_road_trip`** — a whole trip between 2–10 places built with the OpenVan roadbook: day-by-day plan with overnights,
+  budget (fuel, tolls, vignettes, ferries), per-country entry and vehicle rules for the given passports and plates (Schengen
+  90/180 counter), holidays on the trip dates, safety, power, customs, the main warning, a checklist and a link to the
+  shareable roadbook. The plan is computed by the roadbook's own engine (`engine/`, copied by `npm run sync-engine`).
+- **`get_city_travel_weather`** — travel weather of one city or town (score today and for the coming 7 days).
+- `get_country_travel_weather` now also returns the 3 best and 3 toughest cities for the coming week.
+- 27 tools total.
+
+### Fixed
+- Currency and fuel tools reported the rates as updated "recently": the date is now read from `meta.updated_at`.
+
+### Added — API (spec 1.7.0, 43 paths)
+- `POST /api/roadbook/from-places` and `GET /api/roadbook/{code}/status` — roadbook from place names.
+- `GET /api/vansky/weather/{code}/{city}` — VanSky weather of one city.
+
+### Added — SDK v1.2.0
+- `ov.roadbook.create()`, `.status()`, `.plan()` and `ov.weather.city()`.
+
 ## 2026-10-06
 
 ### Changed — MCP server v0.7.1

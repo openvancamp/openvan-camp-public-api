@@ -1,8 +1,8 @@
 {
   "name": "@openvancamp/mcp-server",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "mcpName": "io.github.Kopaev/openvan-travel",
-  "description": "Official MCP server for OpenVan.camp — free vanlife/RV travel data: fuel prices, toll roads, holidays and peak traffic, travel hazards, power plugs, customs rules, events, weather scores, food index, currency, news, license plates of the world. No auth, CC BY 4.0.",
+  "description": "Official MCP server for OpenVan.camp — free vanlife/RV travel data with interactive cards in Claude and ChatGPT: whole-trip roadbooks, fuel prices, toll roads, holidays and peak traffic, travel hazards, power plugs, customs rules, visas, events, weather by country and city, food index, currency, news, license plates of the world. No auth, CC BY 4.0.",
   "license": "MIT",
   "type": "module",
   "bin": {
@@ -13,6 +13,7 @@
   "main": "dist/index.js",
   "files": [
     "dist",
+    "engine",
     "README.md",
     "LICENSE"
   ],
@@ -20,7 +21,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsc --watch",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "sync-engine": "node scripts/sync-engine.mjs"
   },
   "keywords": [
     "mcp",
@@ -34,7 +36,10 @@
     "motorhome",
     "fuel-prices",
     "travel",
-    "openvan"
+    "openvan",
+    "roadbook",
+    "road-trip",
+    "mcp-apps"
   ],
   "homepage": "https://openvan.camp/ai",
   "repository": {

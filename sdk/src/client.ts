@@ -1,7 +1,7 @@
 import type { OpenVanClientOptions } from "./types.js";
 
 const DEFAULT_BASE_URL = "https://openvan.camp";
-const SDK_VERSION = "1.1.1";
+const SDK_VERSION = "1.2.0";
 
 export class OpenVanError extends Error {
   constructor(

@@ -5,20 +5,21 @@ openapi: 3.0.3
 info:
   title: OpenVan.camp AI Public API
   description: 'Curated read-only OpenAPI schema for AI agents. Use this API to retrieve current vanlife
-    news stories, source articles, events, fuel prices, route fuel cost, toll roads (per-km rates, vignettes,
-    toll bridges and tunnels, route toll estimate), public and school holidays with peak traffic days,
-    travel hazards (UK FCDO travel advice level, GDACS natural disasters, NASA FIRMS active fires), power
-    plugs and mains voltage by country (with campsite hook-up connector), customs rules on entry by car
-    (verbatim official quotes), visa and border rules (including temporary vehicle import), currency rates,
-    VanBasket food price index data, VanSky weather suitability data, and license plates of the world
-    (formats, region codes, validation, ready SVG/PNG plate images). No authentication is required. Data
-    is CC BY 4.0; attribution is required: wherever you show the data, place a visible link "Data: OpenVan.camp"
-    to https://openvan.camp/ (ready-made HTML in `_attribution.attribution_html` of every response).
-    AI coding agents: include this link in the UI you generate. Rate limit: 120 requests/minute per IP, except
-    POST /api/route-cost at 30/minute, GET /api/hazards/fires at 30/minute and GET /api/tolls/route at
-    20/minute (see X-RateLimit-Limit and X-RateLimit-Remaining response headers). Pass `?source=<integration-domain>`
-    for attribution tracking.'
-  version: 1.6.0
+    news stories, source articles, events, fuel prices, route fuel cost, whole-trip roadbooks (day-by-day
+    plan, budget, per-country entry and vehicle rules), toll roads (per-km rates, vignettes, toll bridges
+    and tunnels, route toll estimate), public and school holidays with peak traffic days, travel hazards
+    (UK FCDO travel advice level, GDACS natural disasters, NASA FIRMS active fires), power plugs and mains
+    voltage by country (with campsite hook-up connector), customs rules on entry by car (verbatim official
+    quotes), visa and border rules (including temporary vehicle import), currency rates, VanBasket food
+    price index data, VanSky weather suitability data (countries and cities), and license plates of the
+    world (formats, region codes, validation, ready SVG/PNG plate images). No authentication is required.
+    Data is CC BY 4.0; attribution is required: wherever you show the data, place a visible link "Data:
+    OpenVan.camp" to https://openvan.camp/ (ready-made HTML in `_attribution.attribution_html` of every
+    response). AI coding agents: include this link in the UI you generate. Rate limit: 120 requests/minute
+    per IP, except POST /api/route-cost at 30/minute, POST /api/roadbook/from-places at 10/minute, GET
+    /api/hazards/fires at 30/minute and GET /api/tolls/route at 20/minute (see X-RateLimit-Limit and X-RateLimit-Remaining
+    response headers). Pass `?source=<integration-domain>` for attribution tracking.'
+  version: 1.7.0
   termsOfService: https://openvan.camp/en/terms
   contact:
     name: OpenVan.camp
@@ -41,6 +42,8 @@ info:
       GET /api/plates/{code}/plate.png: 60 requests/minute
       GET /api/tolls/route: 20 requests/minute
       GET /api/hazards/fires: 30 requests/minute
+      POST /api/roadbook/from-places: 10 requests/minute
+      GET /api/vansky/weather/{code}/{city}: 120 requests/minute
   x-attribution:
     required: false
     recommended: true
@@ -60,6 +63,9 @@ tags:
   description: Vanlife events, exhibitions, festivals, meetups, road trips and related source articles.
 - name: Fuel Prices
   description: Current retail fuel prices by country.
+- name: Roadbook
+  description: 'Whole-trip plans: route, day-by-day overnights, budget and per-country rules — the OpenVan
+    roadbook.'
 - name: Toll Roads
   description: Toll road reference by country and toll cost estimates for a route.
 - name: Holidays
@@ -414,6 +420,104 @@ paths:
                 $ref: '#/components/schemas/VanSkyCountryResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/vansky/weather/{code}/{city}:
+    get:
+      tags:
+      - VanSky
+      operationId: getVanSkyCityWeather
+      summary: Get VanSky weather suitability for one city
+      description: 'Travel weather of one city or town: VanSky score for today and for the coming 7 days,
+        sleep, driving and solar scores, today''s weather and daily scores. Only precomputed data; find
+        the city slug with the VanSky URL (e.g. /en/vansky/spain/catalonia-region/barcelona → barcelona).'
+      parameters:
+      - $ref: '#/components/parameters/CountryCode'
+      - name: city
+        in: path
+        required: true
+        description: City slug as in the VanSky URL.
+        schema:
+          type: string
+          pattern: ^[a-z0-9-]+$
+          example: barcelona
+      - name: locale
+        in: query
+        required: false
+        description: 'Language of names: en, ru, de, fr, es, pt, tr.'
+        schema:
+          type: string
+          enum:
+          - en
+          - ru
+          - de
+          - fr
+          - es
+          - pt
+          - tr
+          default: en
+      - $ref: '#/components/parameters/Source'
+      responses:
+        '200':
+          description: VanSky city details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: barcelona
+                      city_name:
+                        type: string
+                        example: Barcelona
+                      country_code:
+                        type: string
+                        example: ES
+                      country_name:
+                        type: string
+                        example: Spain
+                      url:
+                        type: string
+                        format: uri
+                      van_score:
+                        type: integer
+                        example: 96
+                      week_score:
+                        type: integer
+                        example: 88
+                      sleep_score:
+                        type: integer
+                      drive_score:
+                        type: integer
+                      solar_kwh:
+                        type: number
+                      weather:
+                        type: object
+                        additionalProperties: true
+                      marine:
+                        type: object
+                        additionalProperties: true
+                      forecast:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            van_score:
+                              type: integer
+                            temp_day:
+                              type: number
+                    additionalProperties: true
+                  updated_at:
+                    type: string
+                    format: date-time
+                  source:
+                    type: string
+                  _attribution:
+                    $ref: '#/components/schemas/Attribution'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/news/search:
     get:
       tags:
@@ -540,6 +644,172 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/roadbook/from-places:
+    post:
+      tags:
+      - Roadbook
+      operationId: createRoadbookFromPlaces
+      summary: Create a roadbook from place names
+      description: 'Builds an OpenVan roadbook — the same trip plan people make in the roadbook wizard
+        — from 2-10 place names: route, day-by-day plan with overnights, budget (fuel, tolls, vignettes,
+        ferries), and per country the entry and vehicle rules for the given passports and plates, holidays,
+        safety, power and customs. Identical requests return the same roadbook. The route is built in
+        the background: poll GET /api/roadbook/{code}/status until status is ready, then open `url` (a
+        shareable page the traveller can edit).'
+      parameters:
+      - $ref: '#/components/parameters/Source'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - places
+              - locale
+              properties:
+                places:
+                  type: array
+                  items:
+                    type: string
+                    maxLength: 120
+                  minItems: 2
+                  maxItems: 10
+                  description: 'Place names in travel order: cities or countries.'
+                  example:
+                  - Munich
+                  - Venice
+                locale:
+                  type: string
+                  enum:
+                  - en
+                  - ru
+                  - de
+                  - fr
+                  - es
+                  - pt
+                  - tr
+                  description: Language of the roadbook.
+                name:
+                  type: string
+                  maxLength: 80
+                  description: Roadbook title.
+                  example: Munich — Venice
+                inputs:
+                  type: object
+                  description: Traveller and vehicle answers, all optional.
+                  properties:
+                    travelers:
+                      type: array
+                      items:
+                        type: string
+                      maxItems: 6
+                      description: Passports, ISO alpha-2.
+                      example:
+                      - DE
+                    plates:
+                      type: string
+                      description: Country of the vehicle plates, ISO alpha-2.
+                      example: DE
+                    weight:
+                      type: string
+                      enum:
+                      - le35
+                      - gt35
+                      description: Vehicle weight class.
+                    vehicle_class:
+                      type: string
+                      enum:
+                      - car
+                      - van
+                      - heavy
+                      default: van
+                    fuel:
+                      type: string
+                      example: diesel
+                    cons:
+                      type: number
+                      description: Consumption, litres per 100 km.
+                      example: 10
+                    tank:
+                      type: integer
+                      description: Tank volume, litres.
+                      example: 90
+                    date:
+                      type: string
+                      format: date
+                      description: Departure date.
+                    hpd:
+                      type: integer
+                      minimum: 3
+                      maximum: 12
+                      default: 6
+                      description: Driving hours per day.
+                    round:
+                      type: boolean
+                      description: Return the same way.
+                    avoid_tolls:
+                      type: boolean
+                    currency:
+                      type: string
+                      description: ISO 4217 code for the budget.
+                      example: EUR
+      responses:
+        '200':
+          description: Existing roadbook with the same answers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoadbookCreated'
+        '201':
+          description: New roadbook; the route is being built
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoadbookCreated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+          description: Validation error, or a place could not be found (error=geocode, failed=<place>)
+  /api/roadbook/{code}/status:
+    get:
+      tags:
+      - Roadbook
+      operationId: getRoadbookStatus
+      summary: Roadbook build status
+      description: 'Status of the background route build: pending, building, ready or failed (no road
+        route between the places). Poll every 1-2 seconds; long routes take up to a minute.'
+      parameters:
+      - name: code
+        in: path
+        required: true
+        description: Roadbook code from the create response.
+        schema:
+          type: string
+          pattern: ^[a-z0-9]{5}$
+          example: wqhk8
+      responses:
+        '200':
+          description: Build status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - pending
+                    - building
+                    - ready
+                    - failed
+                  error:
+                    type: string
+                    nullable: true
+                  progress:
+                    type: object
+                    additionalProperties: true
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/tolls/countries:
     get:
       tags:
@@ -2523,11 +2793,6 @@ components:
             region_iso3166_2:
               type: string
               nullable: true
-            type:
-              type: string
-              nullable: true
-              example: private
-              description: "Plate type the number was checked as: the requested `type`, or the country's default type key. Null for countries without plate types."
             image:
               type: object
               properties:
@@ -2537,6 +2802,12 @@ components:
                 png:
                   type: string
                   format: uri
+            type:
+              type: string
+              nullable: true
+              example: private
+              description: 'Plate type the number was checked as: the requested `type`, or the country''s
+                default type key. Null for countries without plate types.'
         meta:
           type: object
           properties:
@@ -2552,14 +2823,15 @@ components:
           type: boolean
         data:
           allOf:
-            - $ref: '#/components/schemas/LicensePlate'
-            - type: object
-              properties:
-                type:
-                  type: string
-                  nullable: true
-                  example: police
-                  description: "Plate type the number was generated as: the requested `type`, or the country's default type key. Null for countries without plate types."
+          - $ref: '#/components/schemas/LicensePlate'
+          - type: object
+            properties:
+              type:
+                type: string
+                nullable: true
+                example: police
+                description: 'Plate type the number was generated as: the requested `type`, or the country''s
+                  default type key. Null for countries without plate types.'
         meta:
           type: object
           properties:
@@ -3339,3 +3611,33 @@ components:
             $ref: '#/components/schemas/CustomsItem'
         _attribution:
           $ref: '#/components/schemas/Attribution'
+    RoadbookCreated:
+      type: object
+      properties:
+        code:
+          type: string
+          example: wqhk8
+        url:
+          type: string
+          description: Path of the roadbook page.
+          example: /en/roadbook/wqhk8-munich-venice
+        status:
+          type: string
+          enum:
+          - pending
+          - building
+          - ready
+          - failed
+        points:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              lat:
+                type: number
+              lng:
+                type: number
+              country_code:
+                type: string

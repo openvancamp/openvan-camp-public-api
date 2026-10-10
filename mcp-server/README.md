@@ -5,21 +5,24 @@
 
 **Official MCP server for [OpenVan.camp](https://openvan.camp)** — free, no-auth, machine-readable vanlife and RV travel data for AI agents.
 
-Exposes 25 read-only tools via the [Model Context Protocol](https://modelcontextprotocol.io) so you can ask your AI assistant about:
+Exposes 27 read-only tools via the [Model Context Protocol](https://modelcontextprotocol.io) so you can ask your AI assistant about:
 
+- **Whole road trips** — `plan_road_trip` builds an [OpenVan roadbook](https://openvan.camp/en/roadbook): day-by-day plan with overnights, budget (fuel, tolls, vignettes, ferries), entry and vehicle rules for every country on the way, and a shareable roadbook page
 - **Fuel prices** across all API-supported countries, using the same price keys as `/api/fuel/prices`
 - **Toll roads** — per-km rates, vignettes, toll bridges and tunnels by country; toll estimate for a route
 - **Holidays and peak traffic** — public and school holidays (regional), official peak traffic days
 - **Travel hazards** — UK FCDO advice level, GDACS natural disasters, NASA FIRMS active fires of the last 48 hours
 - **Power plugs** — plug types, mains voltage and frequency, campsite hook-up connector (CEE17)
 - **Customs rules** — food bans, cash declaration, alcohol and tobacco limits, with official quotes
-- **VanSky** vanlife weather suitability scores (0-100)
+- **VanSky** vanlife weather suitability scores (0-100) for countries and cities
 - **VanBasket** food price index (world average = 100)
 - **Currency** conversion (150+ currencies)
 - **Events** (expos, festivals, meetups, road trips)
 - **News stories** in 7 languages
 - **Visa and border rules** — entry mode, length of stay, how the days are counted, temporary vehicle import
 - **License plates of the world** — formats, region codes, plate check, and the plate itself as an image
+
+Every tool also returns an **interactive card** ([MCP Apps](https://modelcontextprotocol.io/docs/extensions/apps)) that Claude and ChatGPT render right in the chat: weather with the best and toughest cities of the week, fuel and toll tables with a currency switch, visa terms with a leave-by date, event and news carousels, the whole trip plan. Hosts without MCP Apps get the same data as text.
 
 Data is CC BY 4.0. Attribute *OpenVan.camp* when citing.
 
@@ -81,10 +84,12 @@ npx -y @openvancamp/mcp-server
 
 | Tool | Description |
 |---|---|
+| `plan_road_trip` | Whole trip between 2–10 places via the OpenVan roadbook: day-by-day overnights, budget, per-country entry and vehicle rules (Schengen 90/180), holidays, safety, power, checklist, link to the roadbook |
 | `get_fuel_prices` | Current retail fuel prices per country |
 | `compare_fuel_prices` | Compare one fuel type across 2–10 countries |
 | `find_cheapest_fuel` | Top cheapest countries by fuel type, filterable by region |
 | `get_country_travel_weather` | Campervan travel weather score (0-100), solar yield, 7-day forecast for one country |
+| `get_city_travel_weather` | Campervan travel weather of one city or town: today and the coming 7 days |
 | `list_best_weather_countries` | Top N countries with the best travel weather today |
 | `list_events` | Vanlife events (expos, festivals, meetups) with filters |
 | `get_event` | Details for one event by slug |
@@ -107,7 +112,7 @@ npx -y @openvancamp/mcp-server
 | `get_power_plugs` | Plug types (IEC A–N), voltage and frequency, campsite hook-up connector in Europe |
 | `get_customs_rules` | Customs rules on entry by car: food, cash, alcohol, tobacco, fuel canister, with source quotes |
 
-All tools are `readOnlyHint: true` and `openWorldHint: false`. Safe to allow by default.
+All tools are `readOnlyHint: true` and `openWorldHint: true` (they call the public openvan.camp API). Safe to allow by default.
 
 ---
 
@@ -115,6 +120,8 @@ All tools are `readOnlyHint: true` and `openWorldHint: false`. Safe to allow by 
 
 ## Example prompts
 
+- "Plan a campervan trip from Munich to Venice with a German passport."
+- "What's the weather for a motorhome in Málaga this week?"
 - "What's the cheapest diesel in Europe right now?"
 - "Compare fuel prices between Germany, France, and Spain."
 - "Is Spain a good place to van-camp this week? What about solar yield?"
@@ -135,6 +142,8 @@ The server is a thin TypeScript wrapper around the public OpenVan.camp REST API:
 ```
 MCP host ─► @openvancamp/mcp-server ─► https://openvan.camp/api/*
 ```
+
+`plan_road_trip` creates a roadbook through `POST /api/roadbook/from-places`, waits for the route build and computes the plan with the roadbook's own engine (`engine/`, a copy of the openvan.camp roadbook code made by `npm run sync-engine`), so the answer matches the roadbook page.
 
 Every outbound request automatically appends `?source=mcp-server` for attribution tracking and sets a descriptive User-Agent (`openvan-mcp/<version>`). This helps us credit MCP integrations in public reports and segment traffic.
 

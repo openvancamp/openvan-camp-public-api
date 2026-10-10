@@ -1,7 +1,7 @@
 {
   "name": "openvan-camp-public-api",
-  "version": "1.1.0",
-  "description": "Free vanlife travel data: fuel prices, toll roads, holidays, travel hazards, power plugs, customs rules, weather scores, events, food costs, currencies, visa and vehicle rules, and license plates.",
+  "version": "1.2.0",
+  "description": "Free vanlife travel data: whole-trip roadbooks, fuel prices, toll roads, holidays, travel hazards, power plugs, customs rules, weather scores by country and city, events, food costs, currencies, visa and vehicle rules, and license plates.",
   "mcpServers": {
     "openvan": {
       "httpUrl": "https://mcp.openvan.camp/mcp",

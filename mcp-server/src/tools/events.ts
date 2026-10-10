@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { apiGet } from "../client.js";
+import { SITE } from "../ui/bridge.js";
+import { cardImage } from "../ui/widgets.js";
 
 const EventSchema = z.object({
   slug: z.string(),
@@ -14,7 +16,31 @@ const EventSchema = z.object({
   official_url: z.string().nullable().optional(),
   status: z.string().optional(),
   url: z.string().optional(),
+  image_url: z.string().nullable().optional(),
+  country: z.object({ name: z.string().nullable().optional() }).nullable().optional(),
 });
+
+type EventRow = z.infer<typeof EventSchema>;
+
+/** Событие для карточки: только то, что она рисует. */
+function cardEvent(e: EventRow) {
+  return {
+    slug: e.slug,
+    name: e.event_name,
+    type: e.event_type ?? null,
+    type_label: e.event_type_label ?? null,
+    start: e.start_date ?? null,
+    end: e.end_date ?? null,
+    city: e.city ?? null,
+    country_code: e.country_code ?? null,
+    country_name: e.country?.name ?? null,
+    venue: e.venue_name ?? null,
+    image: cardImage(e.image_url),
+    url: e.url ?? `${SITE}/en/event/${e.slug}`,
+  };
+}
+
+const SOURCE = "OpenVan.camp (CC BY 4.0)";
 
 const EventsResponseSchema = z.object({
   events: z.array(EventSchema),
@@ -90,6 +116,12 @@ export async function listEvents(args: {
 
   return {
     content: [{ type: "text" as const, text: `${header}\n\n${lines.join("\n\n")}` }],
+    structuredContent: {
+      status: args.status,
+      total: pagination?.total ?? events.length,
+      events: events.map(cardEvent),
+      source: SOURCE,
+    },
   };
 }
 
@@ -143,7 +175,19 @@ export async function getEvent({ slug, locale }: { slug: string; locale: string 
       e.description && !e.summary ? `\n${e.description}` : null,
     ].filter(Boolean);
 
-    return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+    return {
+      content: [{ type: "text" as const, text: lines.join("\n") }],
+      structuredContent: {
+        event: {
+          ...cardEvent(e),
+          organizer: e.organizer ?? null,
+          price: e.admission_price ?? null,
+          official_url: e.official_url ?? null,
+          summary: (e.summary ?? e.description ?? "").slice(0, 600) || null,
+        },
+        source: SOURCE,
+      },
+    };
   } catch (err) {
     return {
       content: [{ type: "text" as const, text: `Event "${slug}" not found.` }],

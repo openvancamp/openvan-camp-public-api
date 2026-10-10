@@ -1,6 +1,6 @@
 {
   "name": "@openvancamp/sdk",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Official JavaScript/TypeScript SDK for OpenVan.camp — free vanlife/RV travel data: fuel prices, toll roads, visa rules, license plates, holidays, travel hazards, power plugs, customs, weather scores, food cost index, currency, events, news",
   "license": "MIT",
   "type": "module",

@@ -3,9 +3,9 @@ message: "If you use this data or software, please cite it as below. Data is lic
 title: "OpenVan.camp Public API: open vanlife and RV travel data"
 abstract: >-
   Free, no-auth REST API, MCP server and JavaScript SDK with open travel data for vanlife and RV
-  travelers: retail fuel prices for 160+ countries, toll roads, public and school
+  travelers: whole-trip roadbooks, retail fuel prices for 160+ countries, toll roads, public and school
   holidays, travel hazards, power plugs, customs rules, visa and temporary vehicle-import rules,
-  weather suitability scores, food cost index, license plates of the world, currency rates,
+  weather suitability scores for countries and cities, food cost index, license plates of the world, currency rates,
   vanlife events and multilingual news.
 type: software
 authors:

@@ -96,6 +96,22 @@ curl -s "$API/api/tolls/route?waypoints=Munich|Venice&vehicle_class=van" | jq '{
 # Toll reference for one country
 curl -s "$API/api/tolls/countries/FR" | jq '{name, system_type, vignettes}'
 
+# ─── ROADBOOK (WHOLE TRIP) ───────────────────────────────────────────────────
+
+# Roadbook Munich → Venice: create, poll until ready, open https://openvan.camp + url
+RB=$(curl -s -X POST "$API/api/roadbook/from-places" -H "Content-Type: application/json" \
+  -d '{"places":["Munich","Venice"],"locale":"en","name":"Munich — Venice","inputs":{"travelers":["DE"],"cons":10,"fuel":"diesel"}}')
+CODE=$(echo "$RB" | jq -r .code)
+for i in $(seq 1 40); do
+  ST=$(curl -s "$API/api/roadbook/$CODE/status" | jq -r .status)
+  [ "$ST" = ready ] || [ "$ST" = failed ] && break
+  sleep 1.5
+done
+echo "$RB" | jq --arg st "$ST" --arg api "$API" '{status: $st, url: ($api + .url)}'
+
+# VanSky weather of one city (today and the coming 7 days)
+curl -s "$API/api/vansky/weather/ES/malaga" | jq '.data | {city_name, van_score, week_score}'
+
 # ─── VISA & VEHICLE IMPORT ───────────────────────────────────────────────────
 
 # Russian passport → Turkey: entry mode and stay

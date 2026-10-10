@@ -229,6 +229,30 @@ async function routeTolls(waypoints, vehicleClass = "van") {
   return { total_eur: r.total_eur, range_eur: r.range_eur, partial: r.partial, unknown: r.unknown_countries };
 }
 
+// ─── ROADBOOK (WHOLE TRIP) ───────────────────────────────────────────────────
+
+// The same roadbook people build at openvan.camp/en/roadbook: create, wait, open the page.
+// Identical requests return the same roadbook.
+async function roadbook(places, inputs = {}, locale = "en") {
+  const created = await fetch(`${API}/api/roadbook/from-places`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ places, locale, name: places.join(" — "), inputs }),
+  }).then((r) => r.json());
+  let status = created.status;
+  for (let i = 0; i < 40 && status !== "ready" && status !== "failed"; i++) {
+    await new Promise((r) => setTimeout(r, 1500));
+    status = (await fetch(`${API}/api/roadbook/${created.code}/status`).then((r) => r.json())).status;
+  }
+  return { status, url: `${API}${created.url}`, points: created.points.map((p) => `${p.name} (${p.country_code})`) };
+}
+
+// VanSky weather of one city: today and the coming 7 days
+async function cityWeather(country, citySlug) {
+  const { data } = await fetch(`${API}/api/vansky/weather/${country}/${citySlug}`).then((r) => r.json());
+  return { city: data.city_name, today: data.van_score, week: data.week_score };
+}
+
 // ─── VISA ────────────────────────────────────────────────────────────────────
 
 async function visaCheck(passport, destination) {
@@ -312,6 +336,12 @@ async function customsRules(country, from) {
 
   console.log("\n=== Berlin → Prague: fuel and tolls ===");
   console.log(await routeFuelCost(["Berlin", "Prague"]), await routeTolls(["Berlin", "Prague"]));
+
+  console.log("\n=== Roadbook Munich → Venice (German passport, 10 l/100 km diesel) ===");
+  console.log(await roadbook(["Munich", "Venice"], { travelers: ["DE"], cons: 10, fuel: "diesel" }));
+
+  console.log("\n=== Weather in Málaga for a campervan ===");
+  console.log(await cityWeather("ES", "malaga"));
 
   console.log("\n=== Visa: Russian passport → Turkey ===");
   console.log(await visaCheck("RU", "TR"));

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { apiGet, OpenVanApiError } from "../client.js";
 import { ATTRIBUTION_FOOTER } from "../config.js";
+import { SITE } from "../ui/bridge.js";
 
 /**
  * Toll roads — /api/tolls/*.
@@ -14,6 +15,11 @@ const VehicleClass = z
   .enum(["car", "van", "heavy"])
   .default("van")
   .describe("car; van = campervan/motorhome up to 3.5 t (default); heavy = over 3.5 t.");
+
+/** Результат с данными для карточки. */
+function withCard<T extends object>(card: Record<string, unknown>, result: T): T & { structuredContent: Record<string, unknown> } {
+  return { ...result, structuredContent: card };
+}
 
 function text(value: string, isError = false) {
   return { content: [{ type: "text" as const, text: value }], ...(isError ? { isError: true } : {}) };
@@ -30,10 +36,11 @@ export async function getTollRates({ country_code, locale }: { country_code: str
     const data = await apiGet<Record<string, unknown>>(`/api/tolls/countries/${cc}`, { locale });
     delete data._attribution;
 
-    return text(
+    const card = { mode: "country", ...data, country_code: cc, url: `${SITE}/${locale ?? "en"}/roadbook`, locale: locale ?? null, source: "OpenVan.camp (CC BY 4.0)" };
+    return withCard(card, text(
       `Toll roads in ${cc} (system_type: closed = ticket, open = pay on the road, free_flow = no barriers, vignette = pay for time, free = no tolls). ` +
         `Prices in local currency, *_eur at today's rate:\n\n${JSON.stringify(data, null, 2)}${ATTRIBUTION_FOOTER}`
-    );
+    ));
   } catch (e) {
     if (e instanceof OpenVanApiError && e.status === 404) {
       return text(`No toll data for ${cc} yet — do not assume the roads are free.`, true);
@@ -117,10 +124,32 @@ export async function estimateRouteTolls({
     ? data.points.map((p) => `${p.name} (${p.country_code ?? "?"})`).join(" → ")
     : data.waypoints.join(" → ");
 
-  return text(
+  const card = {
+    mode: "route",
+    points: data.points?.length ? data.points.map((p) => ({ name: p.name, country_code: p.country_code })) : data.waypoints.map((w) => ({ name: w, country_code: null })),
+    distance_km: data.distance_km,
+    vehicle_class: data.vehicle_class,
+    total_eur: data.total_eur,
+    range_eur: data.range_eur,
+    partial: data.partial,
+    unknown_countries: data.unknown_countries,
+    unchecked_countries: data.unchecked_countries ?? [],
+    items: [...grouped.entries()].map(([key, r]) => ({
+      country: key.split("|")[0],
+      label: key.split("|")[1] === "per_km" ? "per_km" : r.label,
+      amount_local: round(r.local),
+      currency: r.currency,
+      amount_eur: r.eur === null ? null : round(r.eur),
+    })),
+    url: `${SITE}/${locale ?? "en"}/roadbook`,
+    locale: locale ?? null,
+    source: "OpenVan.camp (CC BY 4.0)",
+  };
+
+  return withCard(card, text(
     `Tolls ${resolved} (${data.distance_km} km, vehicle_class=${data.vehicle_class}): about €${data.total_eur ?? 0}, range ${range}.\n` +
       (lines.length ? lines.join("\n") : "No toll sections, vignettes or toll bridges found on this route.") +
       partial +
       `\n\nEstimate, not a quote: in ticket systems the price depends on the exits used.${ATTRIBUTION_FOOTER}`
-  );
+  ));
 }

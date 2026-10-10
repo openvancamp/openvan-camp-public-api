@@ -152,6 +152,7 @@ console.log(`diff: ${comp.diff_percent}%, €100 in Spain ≈ €${comp.budget_1
 | Method | Returns |
 |---|---|
 | `.score(countryCode)` | one country — `van_score` 0–100, `score_label`, 7-day `forecast` |
+| `.city(countryCode, citySlug, locale?)` | one city — `van_score` today, `week_score` for the coming 7 days, sleep / drive / solar |
 | `.all()` | every country with weather data |
 | `.top(options?)` | top N countries by `van_score`, best first |
 
@@ -159,6 +160,26 @@ console.log(`diff: ${comp.diff_percent}%, €100 in Spain ≈ €${comp.budget_1
 const fr = await ov.weather.score("FR");
 console.log(fr.van_score);      // today's score 0-100, fr.score_label: "ideal" … "poor"
 console.log(fr.forecast[0]);    // today's detailed scores
+```
+
+---
+
+### `ov.roadbook`
+
+A whole trip plan — the same roadbook people build at [openvan.camp/en/roadbook](https://openvan.camp/en/roadbook): day-by-day overnights, budget (fuel, tolls, vignettes, ferries), and for every country on the way the entry and vehicle rules for the given passports and plates.
+
+| Method | Returns |
+|---|---|
+| `.create(places, options?)` | `RoadbookCreated` — `code`, `url`, `status`, resolved `points` |
+| `.status(code)` | `{ status: "pending" \| "building" \| "ready" \| "failed" }` |
+| `.plan(places, options?)` | creates the roadbook and waits until it is built (default up to 60 s) |
+
+```ts
+const trip = await ov.roadbook.plan(["Munich", "Venice"], {
+  locale: "en",
+  inputs: { travelers: ["DE"], plates: "DE", cons: 10, fuel: "diesel", date: "2026-10-20" },
+});
+console.log(`https://openvan.camp${trip.url}`); // shareable roadbook page
 ```
 
 ---

@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { apiGet } from "../client.js";
+import { countryRef } from "../countries.js";
+import { SITE } from "../ui/bridge.js";
 
 const FuelCountrySchema = z.object({
   country_code: z.string(),
@@ -28,6 +30,7 @@ const FuelResponseSchema = z.object({
 const RatesResponseSchema = z.object({
   rates: z.record(z.string(), z.number()),
   updated_at: z.string().optional(),
+  meta: z.object({ updated_at: z.string().optional() }).passthrough().optional(),
 });
 
 type FuelCountry = z.infer<typeof FuelCountrySchema>;
@@ -136,8 +139,30 @@ async function fetchFuelAndRates() {
   return {
     fuel,
     rates: rates.success ? rates.data.rates : {},
-    ratesUpdatedAt: rates.success ? rates.data.updated_at : undefined,
+    ratesUpdatedAt: rates.success ? (rates.data.meta?.updated_at ?? rates.data.updated_at) : undefined,
   };
+}
+
+// ------------------------------------------------------------------
+// Данные для карточки (structuredContent)
+// ------------------------------------------------------------------
+
+const SOURCE = "OpenVan.camp (CC BY 4.0)";
+
+/** Курсы «единиц за 1 EUR» только для нужных карточке валют: она пересчитывает сама. */
+function ratesFor(currencies: string[], rates: Record<string, number>): Record<string, number> {
+  const out: Record<string, number> = { EUR: 1 };
+  for (const c of new Set([...currencies.map((x) => x.toUpperCase()), "USD"])) {
+    if (rates[c]) out[c] = rates[c];
+  }
+  return out;
+}
+
+const finite = (v: number): number | null => (Number.isFinite(v) ? Math.round(v * 10000) / 10000 : null);
+
+async function fuelPageUrl(code?: string): Promise<string> {
+  const ref = code ? await countryRef(code) : null;
+  return ref ? `${SITE}/en/tools/fuel-prices/${ref.slug}` : `${SITE}/en/tools/fuel-prices`;
 }
 
 // ------------------------------------------------------------------
@@ -173,6 +198,12 @@ export async function getFuelPrices({
         isError: true,
       };
     }
+    const grades = FUEL_TYPES.filter((ft) => entry.prices?.[ft] != null).map((ft) => ({
+      type: ft,
+      price: entry.prices![ft] as number,
+      currency: currencyOf(entry, ft),
+      unit: unitOf(entry, ft),
+    }));
     return {
       content: [
         {
@@ -180,9 +211,24 @@ export async function getFuelPrices({
           text: formatCountry(entry, rates),
         },
       ],
+      structuredContent: {
+        mode: "country",
+        country: { code: entry.country_code, name: entry.country_name },
+        local_currency: entry.currency,
+        grades,
+        rates: ratesFor(grades.map((g) => g.currency), rates),
+        updated_at: entry.fetched_at ?? null,
+        sources: entry.sources ?? [],
+        url: await fuelPageUrl(entry.country_code),
+        source: SOURCE,
+      },
     };
   }
 
+  const perLiter = (c: FuelCountry, ft: string) => finite(toEurPerLiter(toEur(c.prices?.[ft], currencyOf(c, ft), rates), unitOf(c, ft)));
+  const overview = Object.values(fuel.data)
+    .slice(0, 20)
+    .map((c) => ({ code: c.country_code, name: c.country_name, diesel_eur_per_liter: perLiter(c, "diesel"), gasoline_eur_per_liter: perLiter(c, "gasoline") }));
   const summary = Object.values(fuel.data)
     .slice(0, 20)
     .map((c) => formatCountryRow(c, rates))
@@ -194,6 +240,7 @@ export async function getFuelPrices({
         text: `Fuel prices (showing 20 of ${Object.keys(fuel.data).length} countries, local units; ≈ EUR per liter in brackets):\n\n${summary}\n\nPass country_code to get detailed data for one country.`,
       },
     ],
+    structuredContent: { mode: "overview", rows: overview, rates: ratesFor([], rates), url: await fuelPageUrl(), source: SOURCE },
   };
 }
 
@@ -356,6 +403,16 @@ export async function compareFuelPrices({
         text: `${fuel_type} price comparison (cheapest first, sorted by EUR per liter):\n\n${table}\n\n${cheapestLine}${footer}`,
       },
     ],
+    structuredContent: {
+      mode: "ranking",
+      kind: "compare",
+      fuel_type,
+      rows: rows.map(rankingRow),
+      rates: ratesFor([], rates),
+      updated_at: ratesUpdatedAt ?? null,
+      url: await fuelPageUrl(),
+      source: SOURCE,
+    },
   };
 }
 
@@ -443,5 +500,28 @@ export async function findCheapestFuel({
         text: `Cheapest ${fuel_type} in ${region}:\n\n${table}${footer}`,
       },
     ],
+    structuredContent: {
+      mode: "ranking",
+      kind: "cheapest",
+      fuel_type,
+      region,
+      rows: rows.map(rankingRow),
+      rates: ratesFor([], rates),
+      updated_at: ratesUpdatedAt ?? null,
+      url: await fuelPageUrl(),
+      source: SOURCE,
+    },
+  };
+}
+
+/** Строка рейтинга для карточки: местная цена + EUR за литр (null — газ за кг/м³ или нет курса). */
+function rankingRow(r: { c: FuelCountry; cur: string; priceLocal: number | null | undefined; unit: string; priceEurPerLiter: number }) {
+  return {
+    code: r.c.country_code,
+    name: r.c.country_name,
+    price: r.priceLocal ?? null,
+    currency: r.cur,
+    unit: r.unit,
+    eur_per_liter: finite(r.priceEurPerLiter),
   };
 }

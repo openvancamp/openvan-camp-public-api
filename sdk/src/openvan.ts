@@ -1,5 +1,7 @@
 import { OpenVanClient } from "./client.js";
 import type {
+  RoadbookCreated,
+  RoadbookOptions,
   OpenVanClientOptions,
   FuelPricesResponse,
   FuelCountry,
@@ -34,6 +36,7 @@ const LITERS_PER_GALLON = 3.78541;
  * const basket = await ov.basket.compare("DE", "TR");
  * const visa = await ov.visa.check("RU", "TR");
  * const tolls = await ov.tolls.route(["Rome", "Paris"]);
+ * const trip = await ov.roadbook.plan(["Munich", "Venice"], { inputs: { travelers: ["DE"], cons: 10 } });
  * ```
  *
  * Docs: https://openvan.camp/docs
@@ -55,6 +58,7 @@ export class OpenVan {
   readonly hazards: HazardsResource;
   readonly electricity: ElectricityResource;
   readonly customs: CustomsResource;
+  readonly roadbook: RoadbookResource;
 
   constructor(options: OpenVanClientOptions = {}) {
     this.client = new OpenVanClient(options);
@@ -71,6 +75,7 @@ export class OpenVan {
     this.hazards = new HazardsResource(this.client);
     this.electricity = new ElectricityResource(this.client);
     this.customs = new CustomsResource(this.client);
+    this.roadbook = new RoadbookResource(this.client);
   }
 }
 
@@ -199,6 +204,18 @@ class WeatherResource {
   async score(countryCode: string): Promise<Record<string, unknown>> {
     const res = await this.client.get<{ data: Record<string, unknown> }>(
       `/api/vansky/weather/${countryCode.toUpperCase()}`
+    );
+    return res.data;
+  }
+
+  /**
+   * Vanlife weather for one city: score today and for the coming 7 days, sleep / drive / solar.
+   * `citySlug` is the last part of the VanSky URL, e.g. "barcelona".
+   */
+  async city(countryCode: string, citySlug: string, locale?: Locale): Promise<Record<string, unknown>> {
+    const res = await this.client.get<{ data: Record<string, unknown> }>(
+      `/api/vansky/weather/${countryCode.toUpperCase()}/${encodeURIComponent(citySlug)}`,
+      { locale }
     );
     return res.data;
   }
@@ -475,5 +492,45 @@ class CustomsResource {
       from: options.from?.toUpperCase(),
       locale: options.locale,
     });
+  }
+}
+
+// ─── Roadbook ────────────────────────────────────────────────────────────────
+
+class RoadbookResource {
+  constructor(private readonly client: OpenVanClient) {}
+
+  /**
+   * Create a roadbook from 2–10 place names — the same trip plan as the OpenVan roadbook
+   * wizard. Identical requests return the same roadbook. The route is built in the
+   * background: use `status()` or `plan()` to wait for it.
+   */
+  async create(places: string[], options: RoadbookOptions = {}): Promise<RoadbookCreated> {
+    return this.client.post("/api/roadbook/from-places", {
+      places,
+      locale: options.locale ?? "en",
+      name: options.name ?? places.join(" — ").slice(0, 80),
+      inputs: options.inputs ?? {},
+    });
+  }
+
+  /** Build status of a roadbook: pending, building, ready or failed. */
+  async status(code: string): Promise<{ status: "pending" | "building" | "ready" | "failed"; error: string | null }> {
+    return this.client.get(`/api/roadbook/${encodeURIComponent(code)}/status`);
+  }
+
+  /**
+   * Create a roadbook and wait until its route is built (default up to 60 s).
+   * Resolves with the roadbook; open `https://openvan.camp${url}` for the full plan.
+   */
+  async plan(places: string[], options: RoadbookOptions & { timeoutMs?: number } = {}): Promise<RoadbookCreated> {
+    const created = await this.create(places, options);
+    const deadline = Date.now() + (options.timeoutMs ?? 60_000);
+    let status = created.status;
+    while (status !== "ready" && status !== "failed" && Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 1500));
+      status = (await this.status(created.code)).status;
+    }
+    return { ...created, status };
   }
 }

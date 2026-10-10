@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { apiGet, OpenVanApiError } from "../client.js";
 import { ATTRIBUTION_FOOTER } from "../config.js";
+import { SITE } from "../ui/bridge.js";
 
 /**
  * Опасности для поездки — /api/hazards/*: уровень угрозы МИД Великобритании, бедствия GDACS,
@@ -44,11 +45,24 @@ export async function getTravelHazards({ country_code, locale }: { country_code:
       `- ${EVENT_TYPES[e.type] ?? e.type}, alert ${e.alert_level}: ${e.name} (${e.starts_at.slice(0, 10)}${e.ends_at ? ` – ${e.ends_at.slice(0, 10)}` : ""})${e.severity ? `, ${e.severity.trim()}` : ""} ${e.url}`
   );
 
-  return text(
+  const card = {
+    mode: "hazards",
+    country_code: data.country_code,
+    name: data.name,
+    advisory: data.advisory,
+    events: data.events.map((e) => ({ type: e.type, alert_level: e.alert_level, name: e.name, starts_at: e.starts_at, url: e.url })),
+    url: `${SITE}/${locale ?? "en"}/roadbook`,
+    locale: locale ?? null,
+    source: "OpenVan.camp (CC BY 4.0): UK FCDO, GDACS",
+  };
+  return {
+    ...text(
     `Travel hazards in ${data.name} (${data.country_code}) — situation now, not a forecast.\n${advisory}\n\n` +
       (events.length ? `Current GDACS disasters:\n${events.join("\n")}` : "No current GDACS disasters in this country.") +
       `\n\nThe advisory level is the UK government's view; other governments may differ — link the user to the source.${ATTRIBUTION_FOOTER}`
-  );
+    ),
+    structuredContent: card,
+  };
 }
 
 export const getActiveFiresInput = {
@@ -81,9 +95,21 @@ export async function getActiveFires({ bbox }: { bbox: string }) {
   const big = data.fires.filter((f) => f.frp >= 10).length;
   const lines = top.map((f) => `- ${f.lat.toFixed(4)},${f.lng.toFixed(4)} — ${f.frp} MW, seen ${f.seen_at}`);
 
-  return text(
+  const [w, s, e, n] = data.bbox;
+  const card = {
+    mode: "fires",
+    count: data.count,
+    strong: big,
+    top: top.slice(0, 8).map((f) => ({ lat: f.lat, lng: f.lng, frp: f.frp, seen_at: f.seen_at })),
+    center: [Math.round(((w + e) / 2) * 1000) / 1000, Math.round(((s + n) / 2) * 1000) / 1000],
+    source: "NASA FIRMS via OpenVan.camp (CC BY 4.0)",
+  };
+  return {
+    ...text(
     `Active fires (NASA FIRMS VIIRS, last 48 h) in bbox ${data.bbox.join(",")}: ${data.count} detections, ${big} with power ≥ 10 MW.\n` +
       (lines.length ? `Strongest:\n${lines.join("\n")}` : "No fire detections in this box.") +
       `\n\nfrp = fire radiative power: single-digit MW is usually a small fire or a gas flare, tens and hundreds — a real wildfire. Satellite detections, not confirmed fires.${ATTRIBUTION_FOOTER}`
-  );
+    ),
+    structuredContent: card,
+  };
 }

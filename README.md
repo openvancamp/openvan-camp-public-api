@@ -24,7 +24,7 @@ Free, no-auth API for vanlife data: fuel prices, route fuel cost, toll roads, ho
 
 **Daily CSV snapshots:** [`openvancamp/openvan-travel-data`](https://github.com/openvancamp/openvan-travel-data) — fuel prices, exchange rates, food cost index and weather scores as CSV/JSON, one commit a day, with history.
 
-**MCP Server (for AI agents):** [`mcp-server/`](./mcp-server) — 25 read-only tools, hosted at `https://mcp.openvan.camp/mcp`, or locally `npx -y @openvancamp/mcp-server` for Claude Desktop / Cursor / Windsurf. [Install docs →](./mcp-server/README.md) · [AI agents guide →](https://openvan.camp/ai?utm_source=github&utm_medium=referral&utm_campaign=public-api-repo)
+**MCP Server (for AI agents):** [`mcp-server/`](./mcp-server) — 27 read-only tools with interactive cards in Claude and ChatGPT (incl. `plan_road_trip` — a whole-trip roadbook), hosted at `https://mcp.openvan.camp/mcp`, or locally `npx -y @openvancamp/mcp-server` for Claude Desktop / Cursor / Windsurf. [Install docs →](./mcp-server/README.md) · [AI agents guide →](https://openvan.camp/ai?utm_source=github&utm_medium=referral&utm_campaign=public-api-repo)
 
 **Gemini CLI extension:** install this repository with `gemini extensions install https://github.com/openvancamp/openvan-camp-public-api`. The root [`gemini-extension.json`](./gemini-extension.json) connects Gemini CLI directly to the hosted OpenVan MCP server; no API key is required.
 
@@ -51,6 +51,8 @@ The OpenAPI spec at `/docs.openapi` is generated from the live codebase and is t
 |----------|-------------|----------|
 | `GET /api/fuel/prices` | Retail fuel prices (gasoline, diesel, LPG, E85) | 160+ countries |
 | `POST /api/route-cost` | Fuel cost for a route of 2–10 waypoints, per-country prices | — |
+| `POST /api/roadbook/from-places` | Whole-trip roadbook from 2–10 place names: day-by-day plan, budget, per-country entry and vehicle rules; returns a shareable page | — |
+| `GET /api/roadbook/{code}/status` | Build status of a roadbook (poll until `ready`) | — |
 | `GET /api/tolls/countries` | Toll roads by country: payment system, per-km rates by vehicle class, vignettes | 84 countries |
 | `GET /api/tolls/route` | Toll cost for a route of 2–10 place names (car, van, heavy), EUR range | — |
 | `GET /api/holidays/countries/{code}?from=&to=` | Public holidays, school holidays (regional) and peak traffic days | 212 countries |
@@ -64,6 +66,7 @@ The OpenAPI spec at `/docs.openapi` is generated from the live codebase and is t
 | `GET /api/vanbasket/countries/{code}` | Single country + historical snapshots | — |
 | `GET /api/vansky/weather` | Vanlife weather suitability scores (0–100) with 7-day forecast | 160+ countries |
 | `GET /api/vansky/weather/{code}` | One country, with marine and solar data | — |
+| `GET /api/vansky/weather/{code}/{city}` | One city: score today and for the coming 7 days | — |
 | `GET /api/visa/check?passport=RU&destination=TR` | Entry rules: entry mode, length of stay, how days are counted, vehicle import | 199 destinations |
 | `GET /api/visa/route?t=RU,GE,TR&p=RU` | Visa rules for a whole route, up to 10 passports | — |
 | `GET /api/visa/passport/{code}` | All destinations for one passport | — |
@@ -400,6 +403,25 @@ To draw plates in the browser yourself (e.g. an interactive generator), load the
 Images and the engine are available for countries whose plate typeface may be redistributed
 (`glyphs_license`: `free` or `sharealike`); for the rest the data endpoints still work.
 Rate limit: 60 requests/minute for images and `/random`, 120 for the rest.
+
+---
+
+## Roadbook — `/api/roadbook/from-places`
+
+A whole trip plan — the same [roadbook](https://openvan.camp/en/roadbook?utm_source=github&utm_medium=referral&utm_campaign=public-api-repo) people build in the wizard: route, driving days and overnights, budget (fuel, tolls, vignettes, ferries), and for every country on the way the entry and vehicle rules for the given passports and plates, holidays, safety and power. Identical requests return the same roadbook.
+
+```bash
+# 1. Create (all inputs are optional)
+curl -X POST "https://openvan.camp/api/roadbook/from-places?source=your-app" \
+  -H "Content-Type: application/json" \
+  -d '{"places":["Munich","Venice"],"locale":"en","inputs":{"travelers":["DE"],"cons":10,"fuel":"diesel"}}'
+# → {"code":"wqhk8","url":"/en/roadbook/wqhk8-munich-venice","status":"pending","points":[...]}
+
+# 2. Poll until "ready" (long routes take up to a minute), then open https://openvan.camp + url
+curl https://openvan.camp/api/roadbook/wqhk8/status
+```
+
+10 roadbooks per minute per IP. The MCP tool `plan_road_trip` does all of this and returns the plan itself.
 
 ---
 

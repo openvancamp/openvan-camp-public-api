@@ -1,5 +1,11 @@
 import { z } from "zod";
 import { apiGet } from "../client.js";
+import { SITE } from "../ui/bridge.js";
+
+const LOCALE = z
+  .enum(["en", "ru", "de", "fr", "es", "pt", "tr"])
+  .optional()
+  .describe("Language of the conversation with the user: labels and notes come in it. Default en.");
 
 /**
  * Visa and border rules — /api/visa/*.
@@ -43,7 +49,7 @@ const CheckResponseSchema = z.object({
   success: z.boolean().optional(),
   data: z.object({
     passport: z.object({ code: z.string(), name: z.string().nullish() }),
-    destination: z.object({ code: z.string(), name: z.string().nullish() }),
+    destination: z.object({ code: z.string(), name: z.string().nullish(), slug: z.string().nullish() }),
     entry_mode: z.string().nullish(),
     counted_against: z.string().nullish(),
     stay: StaySchema.nullish(),
@@ -130,6 +136,7 @@ export const checkVisaRulesInput = {
     .enum(["eu", "non_eu", "eaeu", "third"])
     .optional()
     .describe("Plate origin for the green card rule."),
+  locale: LOCALE,
 };
 
 export async function checkVisaRules({
@@ -137,18 +144,21 @@ export async function checkVisaRules({
   destination,
   weight,
   plate,
+  locale,
 }: {
   passport: string;
   destination: string;
   weight?: string;
   plate?: string;
+  locale?: string;
 }) {
+  const lang = locale ?? "en";
   const raw = await apiGet("/api/visa/check", {
     passport,
     destination,
     weight,
     plate,
-    locale: "en",
+    locale: lang,
   });
   const parsed = CheckResponseSchema.safeParse(raw);
 
@@ -194,7 +204,25 @@ export async function checkVisaRules({
 
   lines.push(parsed.data.meta?.disclaimer ?? DISCLAIMER);
 
-  return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+  const pairUrl = d.destination.slug
+    ? `${SITE}/${lang}/tools/passport/${d.passport.code.toLowerCase()}/${d.destination.slug}`
+    : `${SITE}/${lang}/tools/passport/${d.passport.code.toLowerCase()}`;
+
+  return {
+    content: [{ type: "text" as const, text: lines.join("\n") }],
+    structuredContent: {
+      mode: "check",
+      passport: d.passport,
+      destination: { code: d.destination.code, name: d.destination.name ?? null, flag: d.destination.code.length === 2 ? d.destination.code : null },
+      entry_mode: d.entry_mode ?? null,
+      counted_against: d.counted_against ?? null,
+      stay: d.stay ?? null,
+      vehicle: d.vehicle ?? null,
+      url: pairUrl,
+      locale: lang,
+      source: "OpenVan.camp (CC BY 4.0)",
+    },
+  };
 }
 
 const RouteResponseSchema = z.object({
@@ -203,10 +231,12 @@ const RouteResponseSchema = z.object({
       z.object({
         code: z.string(),
         name: z.string().nullish(),
+        flag: z.string().nullish(),
         home: z.boolean().nullish(),
         rows: z
           .array(
             z.object({
+              mode: z.string().nullish(),
               mode_label: z.string().nullish(),
               days: z.number().nullish(),
               days_label: z.string().nullish(),
@@ -245,22 +275,26 @@ export const getRouteVisaRulesInput = {
     .enum(["le35", "gt35"])
     .optional()
     .describe("Vehicle weight class for the vehicle rules."),
+  locale: LOCALE,
 };
 
 export async function getRouteVisaRules({
   countries,
   passports,
   weight,
+  locale,
 }: {
   countries: string;
   passports?: string;
   weight?: string;
+  locale?: string;
 }) {
+  const lang = locale ?? "en";
   const raw = await apiGet("/api/visa/route", {
     t: countries,
     p: passports,
     w: weight,
-    locale: "en",
+    locale: lang,
   });
   const parsed = RouteResponseSchema.safeParse(raw);
 
@@ -305,7 +339,17 @@ export async function getRouteVisaRules({
 
   lines.push(DISCLAIMER);
 
-  return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+  return {
+    content: [{ type: "text" as const, text: lines.join("\n") }],
+    structuredContent: {
+      mode: "route",
+      legs: parsed.data.data.legs.map((l) => ({ ...l, rows: (l.rows ?? []).map((r) => ({ ...r, note: undefined })) })),
+      bottleneck: bottleneck ?? null,
+      url: `${SITE}/${lang}/tools/passport`,
+      locale: lang,
+      source: "OpenVan.camp (CC BY 4.0)",
+    },
+  };
 }
 
 const VehicleResponseSchema = z.object({
@@ -321,11 +365,13 @@ export const getVehicleImportRulesInput = {
   country: z
     .string()
     .describe("Country: ISO alpha-2 code, slug or zone code, e.g. georgia or GE."),
+  locale: LOCALE,
 };
 
-export async function getVehicleImportRules({ country }: { country: string }) {
+export async function getVehicleImportRules({ country, locale }: { country: string; locale?: string }) {
+  const lang = locale ?? "en";
   const raw = await apiGet(`/api/visa/vehicle/${encodeURIComponent(country)}`, {
-    locale: "en",
+    locale: lang,
   });
   const parsed = VehicleResponseSchema.safeParse(raw);
 
@@ -363,5 +409,15 @@ export async function getVehicleImportRules({ country }: { country: string }) {
 
   lines.push(parsed.data.meta.disclaimer ?? DISCLAIMER);
 
-  return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+  return {
+    content: [{ type: "text" as const, text: lines.join("\n") }],
+    structuredContent: {
+      mode: "vehicle",
+      name,
+      rules: parsed.data.data,
+      url: `${SITE}/${lang}/tools/passport`,
+      locale: lang,
+      source: "OpenVan.camp (CC BY 4.0)",
+    },
+  };
 }

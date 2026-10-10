@@ -106,7 +106,16 @@ export async function listLicensePlateCountries({ locale }: { locale?: string })
     (c) => `- ${c.country_name ?? c.country_code} (${c.country_code}${c.intl_code ? `, ${c.intl_code}` : ""}) — ${c.regions_count ?? 0} regions, example ${c.example?.formatted ?? "—"}`
   );
 
-  return text(`License plates available for ${lines.length} countries:\n${lines.join("\n")}${ATTRIBUTION_FOOTER}`);
+  return {
+    ...text(`License plates available for ${lines.length} countries:\n${lines.join("\n")}${ATTRIBUTION_FOOTER}`),
+    structuredContent: {
+      mode: "list",
+      countries: parsed.data.data.map((c) => ({ code: c.country_code, name: c.country_name ?? c.country_code, intl: c.intl_code ?? null })),
+      url: `${BASE_URL}/${locale ?? "en"}/license-plates`,
+      locale: locale ?? null,
+      source: "OpenVan.camp (CC BY 4.0)",
+    },
+  };
 }
 
 export const getLicensePlateCountryInput = { country: countryCode, locale };
@@ -128,7 +137,23 @@ export async function getLicensePlateCountry({ country, locale }: { country: str
     (r) => `- ${r.name}: ${r.codes.join(", ") || "—"}${r.legacy_codes?.length ? ` (former: ${r.legacy_codes.join(", ")})` : ""}`
   );
 
-  return text(
+  const card = {
+    mode: "country",
+    code: c.country_code,
+    name: c.country_name ?? c.country_code,
+    intl: c.intl_code ?? null,
+    standard: c.standard ?? null,
+    size_mm: c.size_mm ?? null,
+    example: c.example?.formatted ?? null,
+    example_svg: c.example?.image?.svg ?? null,
+    types: (c.types ?? []).map((t) => ({ key: t.key, name: t.name ?? t.key, svg: t.example?.image?.svg ?? null })),
+    regions: (c.regions ?? []).map((r) => ({ name: r.name, codes: r.codes })),
+    url: c.url ?? `${BASE_URL}/${locale ?? "en"}/license-plates`,
+    locale: locale ?? null,
+    source: "OpenVan.camp (CC BY 4.0)",
+  };
+  return {
+    ...text(
     [
       `${c.country_name ?? c.country_code} license plates${c.intl_code ? ` (international code ${c.intl_code})` : ""}`,
       c.standard ? `Standard: ${c.standard}` : null,
@@ -141,7 +166,9 @@ export async function getLicensePlateCountry({ country, locale }: { country: str
     ]
       .filter(Boolean)
       .join("\n") + ATTRIBUTION_FOOTER
-  );
+    ),
+    structuredContent: card,
+  };
 }
 
 export const checkLicensePlateInput = {
@@ -184,7 +211,8 @@ export async function checkLicensePlate({
   const v = parsed.data.data;
   const plate = [v.number, v.region].filter(Boolean).join(" ");
 
-  return text(
+  return {
+    ...text(
     [
       v.valid
         ? `${plate} is a valid ${country.toUpperCase()} plate format${v.type ? ` (type ${v.type})` : ""}.`
@@ -194,7 +222,20 @@ export async function checkLicensePlate({
     ]
       .filter(Boolean)
       .join("\n") + ATTRIBUTION_FOOTER
-  );
+    ),
+    structuredContent: {
+      mode: "check",
+      code: country.toUpperCase(),
+      plate,
+      valid: v.valid,
+      region: v.region ?? null,
+      region_name: v.region_name ?? null,
+      svg: v.image?.svg ?? null,
+      url: `${BASE_URL}/${locale ?? "en"}/license-plates`,
+      locale: locale ?? null,
+      source: "OpenVan.camp (CC BY 4.0)",
+    },
+  };
 }
 
 export const getLicensePlateImageInput = {
@@ -238,5 +279,13 @@ export async function getLicensePlateImage({
       { type: "image" as const, data: png, mimeType: "image/png" },
       { type: "text" as const, text: `SVG: ${svgUrl}\nPNG: ${pngUrl}${ATTRIBUTION_FOOTER}` },
     ],
+    structuredContent: {
+      mode: "image",
+      code: country.toUpperCase(),
+      plate: [number, region].filter(Boolean).join(" "),
+      svg: svgUrl,
+      png: pngUrl,
+      source: "OpenVan.camp (CC BY 4.0)",
+    },
   };
 }

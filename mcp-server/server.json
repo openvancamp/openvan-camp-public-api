@@ -1,8 +1,8 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Kopaev/openvan-travel",
-  "description": "Vanlife & RV data: fuel, tolls, visas, holidays, hazards, customs, weather, currency. openvan.camp",
-  "version": "0.7.1",
+  "description": "Vanlife & RV data: roadbooks, fuel, tolls, visas, holidays, hazards, weather, currency. openvan.camp",
+  "version": "0.8.0",
   "repository": {
     "url": "https://github.com/openvancamp/openvan-camp-public-api",
     "source": "github"
