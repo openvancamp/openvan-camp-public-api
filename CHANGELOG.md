@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-11
+
+### Changed — MCP server v0.8.1
+- `plan_road_trip` without a consumption estimates fuel for a typical camper (the same default as the OpenVan roadbook
+  wizard, diesel 10 l/100 km) instead of leaving the fuel cost empty; the assumption is marked in the card and in the text.
+- The trip card has a **Your vehicle** panel: fuel type and consumption, and **Recalculate** re-runs `plan_road_trip`
+  from the card.
+- While the roadbook is being built, the trip card shows the build steps (route, tolls, borders and cities, campsites,
+  weather, news) with what was found — the same progress as the roadbook page. Powered by `get_roadbook_build_status`,
+  a helper tool visible only to the card (`_meta.ui.visibility: ["app"]`).
+
 ## 2026-10-10
 
 ### Added — MCP server v0.8.0

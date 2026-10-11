@@ -47,14 +47,15 @@ function resourceMeta(description: string) {
 }
 
 /** _meta для инструмента, у которого есть карточка. */
-export function toolUiMeta(uri: string, invoking: string, invoked: string) {
+export function toolUiMeta(uri: string, invoking: string, invoked: string, widgetAccessible = false) {
   return {
     ui: { resourceUri: uri },
     "ui/resourceUri": uri,
     "openai/outputTemplate": uri,
     "openai/toolInvocation/invoking": invoking,
     "openai/toolInvocation/invoked": invoked,
-    "openai/widgetAccessible": false,
+    // true — карточка сама вызывает этот инструмент (пересчёт поездки с другим расходом).
+    "openai/widgetAccessible": widgetAccessible,
   };
 }
 
@@ -171,7 +172,7 @@ function places(d){
     var h='<div><h2>'+E(title)+'</h2>';
     list.forEach(function(p,i){
       h+='<button class="pl" data-city="'+kind+i+'"><span class="i">'+wIcon(p.clear?0:3,18)+'</span><span class="grow ellipsis">'+E(p.name)+'</span>';
-      h+='<span class="m">'+deg(p.temp_day)+(p.wind!=null?' · '+wind(p.wind):'')+'</span><span class="track"><i style="width:'+p.score+'%;background:'+sColor(p.score)+'"></i></span><b style="color:'+sColor(p.score)+'">'+p.score+'</b></button>';
+      h+='<span class="m">'+deg(p.temp_day)+'</span><span class="track"><i style="width:'+p.score+'%;background:'+sColor(p.score)+'"></i></span><b style="color:'+sColor(p.score)+'">'+p.score+'</b></button>';
     });
     return h+'</div>';
   }

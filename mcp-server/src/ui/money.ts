@@ -39,6 +39,7 @@ const MONEY_CSS = `
 .r .lab{flex:1;min-width:0}
 .r .val{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
 .r .alt{font-size:11px;color:var(--ov-text3);text-align:right}
+.r>span:last-child{flex:none;min-width:120px;text-align:right}
 .bar{flex:none;width:72px;height:6px;border-radius:3px;background:var(--ov-bg2);overflow:hidden}
 .bar i{display:block;height:100%;border-radius:3px;background:var(--ov-primary)}
 .best{color:var(--ov-green)}

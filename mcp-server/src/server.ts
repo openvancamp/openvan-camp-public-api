@@ -66,7 +66,7 @@ import {
 } from "./tools/hazards.js";
 import { getPowerPlugs, getPowerPlugsInput } from "./tools/electricity.js";
 import { getCustomsRules, getCustomsRulesInput } from "./tools/customs.js";
-import { planRoadTrip, planRoadTripInput } from "./tools/trip.js";
+import { getRoadbookBuildStatus, planRoadTrip, planRoadTripInput, roadbookBuildStatusInput } from "./tools/trip.js";
 import { registerWidgets, toolUiMeta, WIDGETS } from "./ui/widgets.js";
 
 // Все 25 tools — read-only HTTP GET к openvan.camp. Ни один не меняет состояние,
@@ -155,9 +155,24 @@ export function createServer(): McpServer {
         "Plan a road trip by campervan or car between 2-10 places with the OpenVan roadbook: distance, driving time and a day-by-day plan with overnights, budget (fuel, tolls, vignettes, ferries), and for every country on the way the entry rule for the given passports and plates, how long you and the vehicle may stay (Schengen 90/180), road rules, holidays on the trip dates, safety and power plugs, plus the main warning and a checklist. Returns a link to the full roadbook the user can open, edit and share. Use this first when the user describes a trip from A to B.",
       inputSchema: planRoadTripInput,
       annotations: readOnlyAnnotations("Plan A Road Trip"),
-      _meta: toolUiMeta(WIDGETS.trip, "Planning the trip…", "Trip summary ready"),
+      _meta: toolUiMeta(WIDGETS.trip, "Planning the trip…", "Trip summary ready", true),
     },
     withAttribution(planRoadTrip)
+  );
+
+  // Ход сборки роудбука — только для карточки plan_road_trip (модель его не видит):
+  // пока Claude ждёт план, карточка показывает этапы, как экран «Роудбук собирается».
+  server.registerTool(
+    "get_roadbook_build_status",
+    {
+      title: "Roadbook Build Progress",
+      description:
+        "Internal helper for the plan_road_trip card: progress of the roadbook build (route, tolls, borders and cities, campsites, weather, news). Not for direct use — call plan_road_trip.",
+      inputSchema: roadbookBuildStatusInput,
+      annotations: readOnlyAnnotations("Roadbook Build Progress"),
+      _meta: { ui: { visibility: ["app"] }, "openai/widgetAccessible": true },
+    },
+    getRoadbookBuildStatus
   );
 
   // Fuel prices

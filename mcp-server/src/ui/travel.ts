@@ -438,13 +438,13 @@ function TOLLS_CSS_EXTRA(): string {
 export const TRIP_WIDGET = "ui://openvan/trip.html";
 
 const TRIP_I18N = {
-  en: { more_info: "Dates, power, customs", total_wo: "Total without fuel", title: "Road trip", back: "and back", km: "km", h: "h", days: "{n} driving days", fuel: "Fuel", tolls: "Tolls", vignettes: "Vignettes", ferries: "Ferries", total: "Total", unknown: "add consumption", visa: "You", car: "Vehicle", roads: "Roads", holidays: "Dates", hazards: "Safety", power: "Power", customs: "Customs", nights: "Overnights", day: "Day {n}", terms: "How long you can stay", you: "you", vehicle: "vehicle", schengen: "Schengen: {u} of 90 days, {l} left", checklist: "Check before you go", best: "Best weather to leave: {d}", open: "Open the roadbook", note: "Same plan as the OpenVan roadbook. Estimates; visa data is reference only." },
-  ru: { more_info: "Даты, розетки, таможня", total_wo: "Итого без топлива", title: "Поездка", back: "и обратно", km: "км", h: "ч", days: "дней за рулём: {n}", fuel: "Топливо", tolls: "Платные дороги", vignettes: "Виньетки", ferries: "Паромы", total: "Итого", unknown: "укажите расход", visa: "Вы", car: "Машина", roads: "Дороги", holidays: "Даты", hazards: "Безопасность", power: "Розетки", customs: "Таможня", nights: "Ночёвки", day: "День {n}", terms: "Сколько можно находиться", you: "вы", vehicle: "машина", schengen: "Шенген: {u} из 90 дней, осталось {l}", checklist: "Проверьте перед выездом", best: "Лучшая погода для выезда: {d}", open: "Открыть роудбук", note: "Тот же план, что в роудбуке OpenVan. Оценка; визовые данные справочные." },
-  de: { more_info: "Termine, Strom, Zoll", total_wo: "Gesamt ohne Kraftstoff", title: "Roadtrip", back: "und zurück", km: "km", h: "Std.", days: "{n} Fahrtage", fuel: "Kraftstoff", tolls: "Maut", vignettes: "Vignetten", ferries: "Fähren", total: "Gesamt", unknown: "Verbrauch angeben", visa: "Sie", car: "Fahrzeug", roads: "Straßen", holidays: "Termine", hazards: "Sicherheit", power: "Strom", customs: "Zoll", nights: "Übernachtungen", day: "Tag {n}", terms: "Wie lange Sie bleiben dürfen", you: "Sie", vehicle: "Fahrzeug", schengen: "Schengen: {u} von 90 Tagen, {l} übrig", checklist: "Vor der Abfahrt prüfen", best: "Bestes Wetter zur Abfahrt: {d}", open: "Roadbook öffnen", note: "Derselbe Plan wie im OpenVan-Roadbook. Schätzung; Visadaten nur zur Orientierung." },
-  fr: { more_info: "Dates, électricité, douane", total_wo: "Total hors carburant", title: "Road trip", back: "aller-retour", km: "km", h: "h", days: "{n} jours de route", fuel: "Carburant", tolls: "Péages", vignettes: "Vignettes", ferries: "Ferries", total: "Total", unknown: "indiquez la consommation", visa: "Vous", car: "Véhicule", roads: "Routes", holidays: "Dates", hazards: "Sécurité", power: "Électricité", customs: "Douane", nights: "Nuits", day: "Jour {n}", terms: "Durée de séjour autorisée", you: "vous", vehicle: "véhicule", schengen: "Schengen : {u} sur 90 jours, reste {l}", checklist: "À vérifier avant le départ", best: "Meilleure météo pour partir : {d}", open: "Ouvrir le road book", note: "Même plan que le road book OpenVan. Estimations ; visas à titre indicatif." },
-  es: { more_info: "Fechas, electricidad, aduana", total_wo: "Total sin combustible", title: "Viaje por carretera", back: "ida y vuelta", km: "km", h: "h", days: "{n} días al volante", fuel: "Combustible", tolls: "Peajes", vignettes: "Viñetas", ferries: "Ferris", total: "Total", unknown: "indica el consumo", visa: "Tú", car: "Vehículo", roads: "Carreteras", holidays: "Fechas", hazards: "Seguridad", power: "Electricidad", customs: "Aduana", nights: "Noches", day: "Día {n}", terms: "Cuánto puedes quedarte", you: "tú", vehicle: "vehículo", schengen: "Schengen: {u} de 90 días, quedan {l}", checklist: "Revisa antes de salir", best: "Mejor tiempo para salir: {d}", open: "Abrir el road book", note: "El mismo plan que el road book de OpenVan. Estimación; visados orientativos." },
-  pt: { more_info: "Datas, eletricidade, alfândega", total_wo: "Total sem combustível", title: "Viagem de estrada", back: "ida e volta", km: "km", h: "h", days: "{n} dias ao volante", fuel: "Combustível", tolls: "Portagens", vignettes: "Vinhetas", ferries: "Ferries", total: "Total", unknown: "indique o consumo", visa: "Você", car: "Veículo", roads: "Estradas", holidays: "Datas", hazards: "Segurança", power: "Eletricidade", customs: "Alfândega", nights: "Noites", day: "Dia {n}", terms: "Quanto tempo pode ficar", you: "você", vehicle: "veículo", schengen: "Schengen: {u} de 90 dias, restam {l}", checklist: "Verifique antes de partir", best: "Melhor tempo para partir: {d}", open: "Abrir o road book", note: "O mesmo plano do road book OpenVan. Estimativa; vistos indicativos." },
-  tr: { more_info: "Tarihler, elektrik, gümrük", total_wo: "Yakıt hariç toplam", title: "Yol gezisi", back: "gidiş-dönüş", km: "km", h: "sa", days: "{n} sürüş günü", fuel: "Yakıt", tolls: "Geçiş ücretleri", vignettes: "Vinyetler", ferries: "Feribotlar", total: "Toplam", unknown: "tüketimi girin", visa: "Siz", car: "Araç", roads: "Yollar", holidays: "Tarihler", hazards: "Güvenlik", power: "Elektrik", customs: "Gümrük", nights: "Konaklamalar", day: "{n}. gün", terms: "Ne kadar kalabilirsiniz", you: "siz", vehicle: "araç", schengen: "Schengen: 90 günün {u}’i, {l} kaldı", checklist: "Yola çıkmadan kontrol edin", best: "Yola çıkmak için en iyi hava: {d}", open: "Yol kitabını aç", note: "OpenVan yol kitabıyla aynı plan. Tahmindir; vize bilgisi bilgi amaçlıdır." },
+  en: { my_car: "Your vehicle", diesel: "Diesel", gasoline: "Petrol", lpg: "LPG", per100: "l/100 km", recalc: "Recalculate", calculating: "Calculating…", typical_note: "Fuel is estimated for a typical camper — set your vehicle’s consumption.", typical: "typical camper", recalc_err: "Could not recalculate — try again.", days_one: "1 driving day", more_info: "Dates, power, customs", total_wo: "Total without fuel", title: "Road trip", back: "and back", km: "km", h: "h", days: "{n} driving days", fuel: "Fuel", tolls: "Tolls", vignettes: "Vignettes", ferries: "Ferries", total: "Total", unknown: "add consumption", visa: "You", car: "Vehicle", roads: "Roads", holidays: "Dates", hazards: "Safety", power: "Power", customs: "Customs", nights: "Overnights", day: "Day {n}", terms: "How long you can stay", you: "you", vehicle: "vehicle", schengen: "Schengen: {u} of 90 days, {l} left", checklist: "Check before you go", best: "Best weather to leave: {d}", open: "Open the roadbook", note: "Same plan as the OpenVan roadbook. Estimates; visa data is reference only." },
+  ru: { my_car: "Ваша машина", diesel: "Дизель", gasoline: "Бензин", lpg: "Газ", per100: "л/100 км", recalc: "Пересчитать", calculating: "Считаю…", typical_note: "Топливо посчитано для типичного кемпера — поставьте расход своей машины.", typical: "типичный кемпер", recalc_err: "Не удалось пересчитать — попробуйте ещё раз.", days_one: "1 день за рулём", more_info: "Даты, розетки, таможня", total_wo: "Итого без топлива", title: "Поездка", back: "и обратно", km: "км", h: "ч", days: "дней за рулём: {n}", fuel: "Топливо", tolls: "Платные дороги", vignettes: "Виньетки", ferries: "Паромы", total: "Итого", unknown: "укажите расход", visa: "Вы", car: "Машина", roads: "Дороги", holidays: "Даты", hazards: "Безопасность", power: "Розетки", customs: "Таможня", nights: "Ночёвки", day: "День {n}", terms: "Сколько можно находиться", you: "вы", vehicle: "машина", schengen: "Шенген: {u} из 90 дней, осталось {l}", checklist: "Проверьте перед выездом", best: "Лучшая погода для выезда: {d}", open: "Открыть роудбук", note: "Тот же план, что в роудбуке OpenVan. Оценка; визовые данные справочные." },
+  de: { my_car: "Ihr Fahrzeug", diesel: "Diesel", gasoline: "Benzin", lpg: "Autogas", per100: "l/100 km", recalc: "Neu berechnen", calculating: "Berechne…", typical_note: "Kraftstoff für ein typisches Wohnmobil geschätzt — geben Sie Ihren Verbrauch an.", typical: "typisches Wohnmobil", recalc_err: "Neuberechnung fehlgeschlagen — bitte erneut versuchen.", days_one: "1 Fahrtag", more_info: "Termine, Strom, Zoll", total_wo: "Gesamt ohne Kraftstoff", title: "Roadtrip", back: "und zurück", km: "km", h: "Std.", days: "{n} Fahrtage", fuel: "Kraftstoff", tolls: "Maut", vignettes: "Vignetten", ferries: "Fähren", total: "Gesamt", unknown: "Verbrauch angeben", visa: "Sie", car: "Fahrzeug", roads: "Straßen", holidays: "Termine", hazards: "Sicherheit", power: "Strom", customs: "Zoll", nights: "Übernachtungen", day: "Tag {n}", terms: "Wie lange Sie bleiben dürfen", you: "Sie", vehicle: "Fahrzeug", schengen: "Schengen: {u} von 90 Tagen, {l} übrig", checklist: "Vor der Abfahrt prüfen", best: "Bestes Wetter zur Abfahrt: {d}", open: "Roadbook öffnen", note: "Derselbe Plan wie im OpenVan-Roadbook. Schätzung; Visadaten nur zur Orientierung." },
+  fr: { my_car: "Votre véhicule", diesel: "Gazole", gasoline: "Essence", lpg: "GPL", per100: "l/100 km", recalc: "Recalculer", calculating: "Calcul…", typical_note: "Carburant estimé pour un camping-car type — indiquez la consommation de votre véhicule.", typical: "camping-car type", recalc_err: "Échec du recalcul — réessayez.", days_one: "1 jour de route", more_info: "Dates, électricité, douane", total_wo: "Total hors carburant", title: "Road trip", back: "aller-retour", km: "km", h: "h", days: "{n} jours de route", fuel: "Carburant", tolls: "Péages", vignettes: "Vignettes", ferries: "Ferries", total: "Total", unknown: "indiquez la consommation", visa: "Vous", car: "Véhicule", roads: "Routes", holidays: "Dates", hazards: "Sécurité", power: "Électricité", customs: "Douane", nights: "Nuits", day: "Jour {n}", terms: "Durée de séjour autorisée", you: "vous", vehicle: "véhicule", schengen: "Schengen : {u} sur 90 jours, reste {l}", checklist: "À vérifier avant le départ", best: "Meilleure météo pour partir : {d}", open: "Ouvrir le road book", note: "Même plan que le road book OpenVan. Estimations ; visas à titre indicatif." },
+  es: { my_car: "Tu vehículo", diesel: "Diésel", gasoline: "Gasolina", lpg: "GLP", per100: "l/100 km", recalc: "Recalcular", calculating: "Calculando…", typical_note: "Combustible estimado para una autocaravana típica: indica el consumo de tu vehículo.", typical: "autocaravana típica", recalc_err: "No se pudo recalcular, inténtalo de nuevo.", days_one: "1 día al volante", more_info: "Fechas, electricidad, aduana", total_wo: "Total sin combustible", title: "Viaje por carretera", back: "ida y vuelta", km: "km", h: "h", days: "{n} días al volante", fuel: "Combustible", tolls: "Peajes", vignettes: "Viñetas", ferries: "Ferris", total: "Total", unknown: "indica el consumo", visa: "Tú", car: "Vehículo", roads: "Carreteras", holidays: "Fechas", hazards: "Seguridad", power: "Electricidad", customs: "Aduana", nights: "Noches", day: "Día {n}", terms: "Cuánto puedes quedarte", you: "tú", vehicle: "vehículo", schengen: "Schengen: {u} de 90 días, quedan {l}", checklist: "Revisa antes de salir", best: "Mejor tiempo para salir: {d}", open: "Abrir el road book", note: "El mismo plan que el road book de OpenVan. Estimación; visados orientativos." },
+  pt: { my_car: "O seu veículo", diesel: "Gasóleo", gasoline: "Gasolina", lpg: "GPL", per100: "l/100 km", recalc: "Recalcular", calculating: "A calcular…", typical_note: "Combustível estimado para uma autocaravana típica — indique o consumo do seu veículo.", typical: "autocaravana típica", recalc_err: "Não foi possível recalcular — tente novamente.", days_one: "1 dia ao volante", more_info: "Datas, eletricidade, alfândega", total_wo: "Total sem combustível", title: "Viagem de estrada", back: "ida e volta", km: "km", h: "h", days: "{n} dias ao volante", fuel: "Combustível", tolls: "Portagens", vignettes: "Vinhetas", ferries: "Ferries", total: "Total", unknown: "indique o consumo", visa: "Você", car: "Veículo", roads: "Estradas", holidays: "Datas", hazards: "Segurança", power: "Eletricidade", customs: "Alfândega", nights: "Noites", day: "Dia {n}", terms: "Quanto tempo pode ficar", you: "você", vehicle: "veículo", schengen: "Schengen: {u} de 90 dias, restam {l}", checklist: "Verifique antes de partir", best: "Melhor tempo para partir: {d}", open: "Abrir o road book", note: "O mesmo plano do road book OpenVan. Estimativa; vistos indicativos." },
+  tr: { my_car: "Aracınız", diesel: "Dizel", gasoline: "Benzin", lpg: "LPG", per100: "l/100 km", recalc: "Yeniden hesapla", calculating: "Hesaplanıyor…", typical_note: "Yakıt tipik bir karavana göre hesaplandı — aracınızın tüketimini girin.", typical: "tipik karavan", recalc_err: "Yeniden hesaplanamadı — tekrar deneyin.", days_one: "1 sürüş günü", more_info: "Tarihler, elektrik, gümrük", total_wo: "Yakıt hariç toplam", title: "Yol gezisi", back: "gidiş-dönüş", km: "km", h: "sa", days: "{n} sürüş günü", fuel: "Yakıt", tolls: "Geçiş ücretleri", vignettes: "Vinyetler", ferries: "Feribotlar", total: "Toplam", unknown: "tüketimi girin", visa: "Siz", car: "Araç", roads: "Yollar", holidays: "Tarihler", hazards: "Güvenlik", power: "Elektrik", customs: "Gümrük", nights: "Konaklamalar", day: "{n}. gün", terms: "Ne kadar kalabilirsiniz", you: "siz", vehicle: "araç", schengen: "Schengen: 90 günün {u}’i, {l} kaldı", checklist: "Yola çıkmadan kontrol edin", best: "Yola çıkmak için en iyi hava: {d}", open: "Yol kitabını aç", note: "OpenVan yol kitabıyla aynı plan. Tahmindir; vize bilgisi bilgi amaçlıdır." },
 };
 
 const TRIP_CSS = `
@@ -464,6 +464,33 @@ const TRIP_CSS = `
 .cty details{margin-top:4px}
 .cty summary{cursor:pointer;font-size:12px;color:var(--ov-primary);min-height:32px;display:flex;align-items:center}
 .nt{display:flex;flex-wrap:wrap;gap:6px}
+.veh{margin:12px 16px 0;padding:12px;border-radius:var(--ov-radius-sm);background:var(--ov-bg2);display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.veh .lbl{font-size:12px;font-weight:600;color:var(--ov-text2);width:100%}
+.opt{display:inline-flex;background:var(--ov-bg);border:1px solid var(--ov-border);border-radius:9999px;padding:2px}
+.opt button{appearance:none;border:0;background:transparent;color:var(--ov-text2);font:inherit;font-size:13px;font-weight:600;min-height:36px;padding:0 12px;border-radius:9999px;cursor:pointer}
+.opt button[aria-pressed=true]{background:var(--ov-primary);color:#fff}
+.step{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ov-text2)}
+.step button{appearance:none;width:36px;height:36px;border-radius:50%;border:1px solid var(--ov-border);background:var(--ov-bg);color:var(--ov-text);font:inherit;font-size:18px;cursor:pointer}
+.step b{min-width:34px;text-align:center;font-size:16px;color:var(--ov-text)}
+.veh .btn{min-height:38px;padding:6px 14px;margin-left:auto}
+.veh .btn[disabled]{opacity:.5;cursor:default}
+.veh .muted{width:100%}
+.busy{opacity:.55;pointer-events:none}
+.bsteps{list-style:none;margin:0;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.bsteps li{display:flex;gap:10px;align-items:flex-start}
+.bsteps .ic{width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.bsteps .dot{width:8px;height:8px;border-radius:50%;background:var(--ov-border)}
+.bsteps .spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--ov-border);border-top-color:var(--ov-primary);animation:sp 0.8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.bsteps .spin{animation:none}}
+.bsteps .chk{color:var(--ov-ideal);font-weight:800}
+.bsteps .lab{font-size:14px;color:var(--ov-text3)}
+.bsteps li.active .lab{color:var(--ov-text);font-weight:600}
+.bsteps li.done .lab{color:var(--ov-text2)}
+.bsteps .det{font-size:12px;color:var(--ov-text3);margin-top:3px;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.pbar{height:6px;margin:0 16px;border-radius:3px;background:var(--ov-bg2);overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--ov-primary);transition:width .3s}
+.pfoot{display:flex;justify-content:space-between;padding:8px 16px 14px;font-size:12px;color:var(--ov-text3)}
 `;
 
 const TRIP_JS = `
@@ -471,17 +498,87 @@ var T=${JSON.stringify(TRIP_I18N)};function t(k){return OV.t(T,k)}
 ${HELPERS_JS}
 function cur(v,c){if(v==null)return "—";try{return new Intl.NumberFormat(OV.hostLocale(),{style:"currency",currency:c||"EUR",maximumFractionDigits:0}).format(v)}catch(e){return v+" "+c}}
 var SC={ok:"ok",warn:"mid",bad:"bad"};
-OV.onData(function(d){current=d;
+var car=null,busy=false,err=false;
+function vehPanel(d){
+  if(!d.args||!d.vehicle)return "";
+  var dirty=car.fuel!==d.vehicle.fuel||car.cons!==d.vehicle.consumption;
+  var h='<div class="veh'+(busy?' busy':'')+'"><span class="lbl">'+E(t("my_car"))+'</span><div class="opt" role="group">';
+  ["diesel","gasoline","lpg"].forEach(function(f){h+='<button data-fuel="'+f+'" aria-pressed="'+(car.fuel===f)+'">'+E(t(f))+'</button>'});
+  h+='</div><span class="step"><button data-cons="-1" aria-label="−">−</button><b>'+car.cons+'</b>'+E(t("per100"))+'<button data-cons="1" aria-label="+">+</button></span>';
+  h+='<button class="btn btn-primary" data-recalc'+(dirty&&!busy?'':' disabled')+'>'+E(busy?t("calculating"):t("recalc"))+'</button>';
+  if(err)h+='<span class="muted">'+E(t("recalc_err"))+'</span>';
+  else if(d.vehicle.assumed&&d.vehicle.assumed.cons&&!dirty)h+='<span class="muted">'+E(t("typical_note"))+'</span>';
+  return h+'</div>';
+}
+document.addEventListener("click",function(e){
+  if(!current||!current.args||busy)return;
+  var f=e.target.closest("[data-fuel]");if(f){car.fuel=f.getAttribute("data-fuel");err=false;draw(view(current));return}
+  var c=e.target.closest("[data-cons]");if(c){car.cons=Math.max(3,Math.min(40,car.cons+Number(c.getAttribute("data-cons"))));err=false;draw(view(current));return}
+  if(e.target.closest("[data-recalc]")){
+    busy=true;err=false;draw(view(current));
+    OV.callTool("plan_road_trip",Object.assign({},current.args,{fuel:car.fuel,consumption:car.cons})).then(function(n){busy=false;if(n&&n.mode==="trip"){current=n;car={fuel:n.vehicle.fuel,cons:n.vehicle.consumption}}else{err=true}draw(view(current))}).catch(function(){busy=false;err=true;draw(view(current))});
+  }
+});
+// ── Пока инструмент ждёт сборку: этапы как на экране «Роудбук собирается» (building.blade.php) ──
+var STEP_KEYS=["route","tolls","places","camps","weather","news"],prog=null,ptick=null;
+function stopProg(){prog=null;clearInterval(ptick);ptick=null}
+function stepPos(){if(!prog)return -1;if(prog.stage==="done")return STEP_KEYS.length;var i=STEP_KEYS.indexOf(prog.stage);return i}
+function stepDetail(key){
+  var st=prog.steps||{},tpl=st[key+"_done"]||"",f=prog.facts||{},keys=(tpl.match(/:([a-z_]+)/g)||[]).map(function(x){return x.slice(1)});
+  if(!tpl||keys.some(function(k){return f[k]==null}))return "";
+  return keys.reduce(function(txt,k){return txt.replace(":"+k,k==="km"?f[k]+" km":f[k])},tpl);
+}
+function progressView(){
+  var st=prog.steps||{},pos=stepPos(),el=Math.round((Date.now()-prog.started)/1000);
+  var h='<div class="card"><div class="hero"><h1 class="h1">'+E(prog.title||t("title"))+'</h1><div class="sub">'+E((prog.args.waypoints||[]).join(" → "))+'</div></div>';
+  if(!prog.steps){h+='<div class="body"><div class="skel" style="height:160px"></div></div>'}
+  else{
+    h+='<ol class="bsteps">';
+    STEP_KEYS.forEach(function(k,i){
+      if(i>Math.max(0,pos)+1)return;
+      var state=i<pos?"done":(i===pos||(pos===-1&&i===0)?"active":"todo");
+      h+='<li class="'+state+'"><span class="ic">'+(state==="done"?'<span class="chk">✓</span>':state==="active"?'<span class="spin"></span>':'<span class="dot"></span>')+'</span><div><div class="lab">'+E(st[k]||k)+'</div>';
+      if(state==="done"){var det=stepDetail(k),f=prog.facts||{};h+='<div class="det">'+(k==="tolls"&&f.countries?f.countries.map(function(c){return flag(c,"flag-sm")}).join(""):"")+(det?'<span>'+E(det)+'</span>':'')+(k==="tolls"&&f.tolls_eur>0&&st.tolls_sum?'<span>'+(det?'· ':'')+E(st.tolls_sum.replace(":sum",f.tolls_eur))+'</span>':'')+'</div>'}
+      h+='</div></li>';
+    });
+    h+='</ol>';
+    var pct=Math.max(4,Math.min(97,Math.round(((Math.max(0,pos)+0.5)/STEP_KEYS.length)*100)));if(prog.stage==="done")pct=100;
+    h+='<div class="pbar"><i style="width:'+pct+'%"></i></div><div class="pfoot"><span>'+E(prog.stage==="queued"?(st.queued||""):prog.stage==="waiting"?(st.waiting||""):prog.stage==="done"?(st.done||""):pct+"%")+'</span><span>'+E((st.elapsed||":s s").replace(":s",el))+'</span></div>';
+  }
+  return h+'</div>';
+}
+function pollProg(){
+  if(!prog||OV.hasData())return stopProg();
+  var q=prog.code?{code:prog.code,locale:prog.args.locale}:prog.args;
+  OV.callTool("get_roadbook_build_status",q).then(function(r){
+    if(!prog||OV.hasData())return;
+    if(r){prog.code=r.code||prog.code;prog.steps=r.steps||prog.steps;prog.title=r.title||prog.title;if(r.progress){prog.stage=r.progress.stage||prog.stage;prog.facts=r.progress.facts||prog.facts}if(r.status==="ready")prog.stage="done"}
+    // Собрано, а результата инструмента нет (он ответил «ещё строится» — долгий маршрут):
+    // через пару секунд берём готовый план сами, тем же инструментом.
+    if(r&&r.status==="ready"&&!prog.fetching){prog.fetching=true;setTimeout(function(){if(!prog||OV.hasData())return;OV.callTool("plan_road_trip",prog.args).then(function(n){if(n&&n.mode==="trip"&&prog){stopProg();current=n;car={fuel:n.vehicle.fuel,cons:n.vehicle.consumption};draw(view(n))}}).catch(function(){})},4000)}
+    draw(progressView());
+    if(!r||(r.status!=="ready"&&r.status!=="failed"))setTimeout(pollProg,1500);
+  }).catch(function(){if(prog)setTimeout(pollProg,3000)});
+}
+OV.onInput(function(a){
+  if(OV.hasData()||prog||!a||!a.waypoints)return;
+  prog={args:a,started:Date.now(),stage:"queued",facts:{},steps:null,title:null,code:null};
+  draw(progressView());
+  ptick=setInterval(function(){if(prog&&!OV.hasData())draw(progressView());else stopProg()},1000);
+  pollProg();
+});
+OV.onData(function(d){stopProg();current=d;car={fuel:d.vehicle?d.vehicle.fuel:"diesel",cons:d.vehicle?d.vehicle.consumption:10};busy=false;err=false;draw(view(d))});
+function view(d){
   var h='<div class="card"><div class="hero"><h1 class="h1">'+E(t("title"))+': '+E(d.title)+(d.round_trip?' '+E(t("back")):'')+'</h1>';
-  h+='<div class="sub">'+E(d.distance_km)+' '+t("km")+' · ~'+E(d.hours)+' '+t("h")+(d.drive_days?' · '+E(t("days").replace("{n}",d.drive_days)):'')+(d.first_day?' · '+E(dt(d.first_day,{day:"numeric",month:"short"}))+(d.end_date?' – '+E(dt(d.end_date,{day:"numeric",month:"short"})):''):'')+'</div>';
+  h+='<div class="sub">'+E(d.distance_km)+' '+t("km")+' · ~'+E(d.hours)+' '+t("h")+(d.drive_days?' · '+E(d.drive_days===1?t("days_one"):t("days").replace("{n}",d.drive_days)):'')+(d.first_day?' · '+E(dt(d.first_day,{day:"numeric",month:"short"}))+(d.end_date&&d.end_date!==d.first_day?' – '+E(dt(d.end_date,{day:"numeric",month:"short"})):''):'')+'</div>';
   var tt=d.totals;
   if(tt){h+='<div class="stats">';
-    h+='<div class="stat"><b>'+(tt.fuel_unknown?'—':cur(tt.fuel,d.currency))+'</b><span>'+E(t("fuel"))+(tt.fuel_unknown?' · '+E(t("unknown")):'')+'</span></div>';
+    h+='<div class="stat"><b>'+(tt.fuel_unknown?'—':cur(tt.fuel,d.currency))+'</b><span>'+E(t("fuel"))+(tt.fuel_unknown?' · '+E(t("unknown")):(d.vehicle&&d.vehicle.assumed&&d.vehicle.assumed.cons?' · '+E(t("typical")):''))+'</span></div>';
     h+='<div class="stat"><b>'+cur(tt.tolls,d.currency)+'</b><span>'+E(t("tolls"))+'</span></div>';
     if(tt.vignettes)h+='<div class="stat"><b>'+cur(tt.vignettes,d.currency)+'</b><span>'+E(t("vignettes"))+'</span></div>';
     if(tt.ferries)h+='<div class="stat"><b>'+cur(tt.ferries,d.currency)+'</b><span>'+E(t("ferries"))+'</span></div>';
     h+='<div class="stat"><b>'+cur(tt.total,d.currency)+'</b><span>'+E(tt.fuel_unknown?t("total_wo"):t("total"))+'</span></div></div>';}
-  h+='</div>';
+  h+='</div>'+vehPanel(d);
   if(d.alert)h+='<div class="alert '+(SC[d.alert.s]||"mid")+'"><b>'+E(d.alert.title)+'</b>'+E(d.alert.text)+'</div>';
   d.countries.forEach(function(c){
     h+='<div class="cty"><div class="row">'+flag(c.cc,"flag-sm")+'<span class="t1 grow">'+E(c.name)+'</span><span class="muted">'+E(c.km)+' '+t("km")+(c.cost!=null&&!(d.totals&&d.totals.fuel_unknown)?' · '+cur(c.cost,d.currency):'')+'</span></div>';
@@ -500,8 +597,8 @@ OV.onData(function(d){current=d;
   var warn=[];(d.checklist||[]).forEach(function(g){g.items.forEach(function(i){if(i.s==="bad"||i.s==="warn")warn.push(i)})});
   if(warn.length){h+='<div class="sec">'+E(t("checklist"))+'</div>';warn.slice(0,6).forEach(function(i){h+='<div class="note" style="margin-top:4px"><span class="tag '+(SC[i.s]||"mid")+'">!</span> '+E(i.t)+'</div>'})}
   h+='<div class="muted" style="margin-top:12px">'+E(t("note"))+'</div></div>';
-  draw(h+btns([[t("open"),d.url]])+foot(""));
-});
+  return h+btns([[t("open"),d.url]])+foot("");
+}
 `;
 
 TRAVEL_HTML[TRIP_WIDGET] = {

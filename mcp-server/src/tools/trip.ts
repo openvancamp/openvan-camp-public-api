@@ -85,14 +85,22 @@ function enginePath(): string {
   return found;
 }
 
-const textsCache = new Map<string, { at: number; texts: Record<string, unknown> }>();
+type RoadbookTextsResponse = {
+  texts: Record<string, unknown>;
+  typical_cons?: number;
+  typical_fuel?: string;
+  build_steps?: Record<string, string>;
+  building_title?: string;
+};
+const textsCache = new Map<string, { at: number; data: RoadbookTextsResponse }>();
 
-async function roadbookTexts(locale: string): Promise<Record<string, unknown>> {
+/** Тексты роудбука и «типичный кемпер» сайта (RoadbookShowcase::TYPICAL_CONS) — один запрос, кеш на час. */
+async function roadbookTexts(locale: string): Promise<RoadbookTextsResponse> {
   const hit = textsCache.get(locale);
-  if (hit && Date.now() - hit.at < 3600_000) return hit.texts;
-  const { texts } = await apiGet<{ texts: Record<string, unknown> }>(`/api/roadbook/texts/${locale}`);
-  textsCache.set(locale, { at: Date.now(), texts });
-  return texts;
+  if (hit && Date.now() - hit.at < 3600_000) return hit.data;
+  const data = await apiGet<RoadbookTextsResponse>(`/api/roadbook/texts/${locale}`);
+  textsCache.set(locale, { at: Date.now(), data });
+  return data;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -134,21 +142,27 @@ type Summary = {
   weather_window: { date: string | null; t: number | null } | null;
 };
 
-export async function planRoadTrip(args: Args) {
-  const locale = args.locale ?? "en";
-  const currency = (args.currency ?? "EUR").toUpperCase();
+/**
+ * Входные данные роудбука из аргументов инструмента. Одна функция для plan_road_trip и
+ * для опроса хода сборки из карточки: одинаковые входы → тот же роудбук (inputs_hash),
+ * поэтому карточка показывает ход сборки ровно того роудбука, который ждёт инструмент.
+ * Машина не указана — как мастер и витрина роудбука: «типичный кемпер» сайта.
+ */
+function tripInputs(args: Args, rb: RoadbookTextsResponse, currency: string) {
   const travelers = (args.passports ?? "")
     .split(",")
     .map((s) => s.trim().toUpperCase())
     .filter((s) => /^[A-Z]{2}$/.test(s));
-
+  const assumed = { cons: args.consumption == null, fuel: args.fuel == null };
+  const fuel = args.fuel ?? rb.typical_fuel ?? "diesel";
+  const consumption = args.consumption ?? rb.typical_cons ?? 10;
   const inputs: Record<string, unknown> = {
     travelers,
     plates: args.plates?.toUpperCase(),
     weight: args.weight ?? (args.vehicle_class === "heavy" ? "gt35" : undefined),
-    vehicle_class: args.vehicle_class,
-    fuel: args.fuel,
-    cons: args.consumption,
+    vehicle_class: args.vehicle_class ?? "van",
+    fuel,
+    cons: consumption,
     tank: args.tank,
     date: args.start_date,
     hpd: args.hours_per_day,
@@ -156,11 +170,76 @@ export async function planRoadTrip(args: Args) {
     avoid_tolls: args.avoid_tolls,
     currency,
   };
+  return { inputs, fuel, consumption, assumed };
+}
+
+/** Статус сборки: один запрос к API на роудбук раз в секунду, сколько бы его ни опрашивали. */
+const statusCache = new Map<string, { at: number; p: Promise<{ status: string; progress?: Record<string, unknown> | null }> }>();
+function roadbookStatus(code: string) {
+  const hit = statusCache.get(code);
+  if (hit && Date.now() - hit.at < 1000) return hit.p;
+  const p = apiGet<{ status: string; progress?: Record<string, unknown> | null }>(`/api/roadbook/${code}/status`);
+  statusCache.set(code, { at: Date.now(), p });
+  if (statusCache.size > 500) statusCache.clear();
+  return p;
+}
+
+const createRoadbook = (args: Args, locale: string, inputs: Record<string, unknown>) =>
+  apiPost<{ code: string; url: string; status: string; points: Array<{ name: string; country_code: string | null }> }>(
+    "/api/roadbook/from-places",
+    { places: args.waypoints, name: args.waypoints.join(" — ").slice(0, 80), locale, inputs }
+  );
+
+// ------------------------------------------------------------------
+// get_roadbook_build_status — только для карточки: ход сборки, как экран роудбука
+// ------------------------------------------------------------------
+
+export const roadbookBuildStatusInput = {
+  ...planRoadTripInput,
+  waypoints: planRoadTripInput.waypoints.optional(),
+  code: z.string().regex(/^[a-z0-9]{5}$/).optional().describe("Roadbook code from a previous call."),
+};
+
+export async function getRoadbookBuildStatus(args: Partial<Args> & { code?: string }) {
+  const locale = args.locale ?? "en";
+  const rb = await roadbookTexts(locale);
+  let code = args.code;
+  let url: string | null = null;
+  if (!code) {
+    if (!args.waypoints?.length) {
+      return { content: [{ type: "text" as const, text: "Pass code or waypoints." }], isError: true };
+    }
+    const full = { vehicle_class: "van", ...args } as Args;
+    const { inputs } = tripInputs(full, rb, (args.currency ?? "EUR").toUpperCase());
+    const created = await createRoadbook(full, locale, inputs);
+    code = created.code;
+    url = `${SITE}${created.url}`;
+  }
+  const st = await roadbookStatus(code).catch(() => ({ status: "pending", progress: null }));
+  return {
+    content: [{ type: "text" as const, text: `Roadbook ${code}: ${st.status}` }],
+    structuredContent: {
+      mode: "building",
+      code,
+      url,
+      status: st.status,
+      progress: st.progress ?? null,
+      steps: rb.build_steps ?? null,
+      title: rb.building_title ?? null,
+    },
+  };
+}
+
+export async function planRoadTrip(args: Args) {
+  const locale = args.locale ?? "en";
+  const currency = (args.currency ?? "EUR").toUpperCase();
+  const rb = await roadbookTexts(locale);
+  const { inputs, fuel, consumption, assumed } = tripInputs(args, rb, currency);
 
   // 1. Роудбук — тем же путём, что мастер на сайте.
   let created: { code: string; url: string; status: string; points: Array<{ name: string; country_code: string | null }> };
   try {
-    created = await apiPost("/api/roadbook/from-places", { places: args.waypoints, name: args.waypoints.join(" — ").slice(0, 80), locale, inputs });
+    created = await createRoadbook(args, locale, inputs);
   } catch (e) {
     const body = (e instanceof OpenVanApiError ? e.body : null) as { message?: string; error?: string } | null;
     return { content: [{ type: "text" as const, text: `The trip could not be planned: ${body?.message ?? body?.error ?? "error"}. Add a country to an ambiguous place name.` }], isError: true };
@@ -172,7 +251,7 @@ export async function planRoadTrip(args: Args) {
   const deadline = Date.now() + BUILD_WAIT_MS;
   while (status !== "ready" && status !== "failed" && Date.now() < deadline) {
     await sleep(1500);
-    status = (await apiGet<{ status: string }>(`/api/roadbook/${created.code}/status`).catch(() => ({ status }))).status;
+    status = (await roadbookStatus(created.code).catch(() => ({ status }))).status;
   }
   if (status === "failed") {
     return { content: [{ type: "text" as const, text: `No road route between these places (sea crossing, closed border or no road network). Roadbook: ${roadbookUrl}` }], isError: true };
@@ -186,7 +265,7 @@ export async function planRoadTrip(args: Args) {
   // 3. Данные роудбука, тексты и визовые правила — те же, что получает страница.
   const [resp, texts, hazards] = await Promise.all([
     apiGet<{ payload: Record<string, unknown> & { route: { countries?: Array<{ cc: string }> }; visaPreload?: { key: string; data: unknown } } }>(`/api/roadbook/${created.code}/payload/${locale}`),
-    roadbookTexts(locale),
+    Promise.resolve(rb.texts),
     // Обстановка у маршрута меняется каждый час — страница тоже берёт её отдельно (page.js).
     apiGet<Record<string, unknown>>(`/api/roadbook/${created.code}/hazards`).catch(() => ({ failed: true })),
   ]);
@@ -221,7 +300,7 @@ export async function planRoadTrip(args: Args) {
   ];
   if (s.totals) {
     lines.push(
-      `Budget: fuel ${s.totals.fuel_unknown ? "unknown (no consumption given)" : money(s.totals.fuel)}, tolls ${money(s.totals.tolls)}, vignettes ${money(s.totals.vignettes)}, ferries ${money(s.totals.ferries)} — total ${s.totals.fuel_unknown ? "without fuel " : ""}${money(s.totals.total)}${s.totals.roads_unknown.length ? ` (no toll data for ${s.totals.roads_unknown.join(", ")})` : ""}.`
+      `Budget: fuel ${s.totals.fuel_unknown ? "unknown" : money(s.totals.fuel)}${assumed.cons ? ` (ASSUMED typical camper: ${fuel}, ${consumption} l/100 km — ask the user for their vehicle's consumption and call again)` : ""}, tolls ${money(s.totals.tolls)}, vignettes ${money(s.totals.vignettes)}, ferries ${money(s.totals.ferries)} — total ${s.totals.fuel_unknown ? "without fuel " : ""}${money(s.totals.total)}${s.totals.roads_unknown.length ? ` (no toll data for ${s.totals.roads_unknown.join(", ")})` : ""}.`
     );
   }
   if (s.alert) lines.push("", `MAIN WARNING: ${s.alert.title}. ${s.alert.text}`);
@@ -249,6 +328,9 @@ export async function planRoadTrip(args: Args) {
       title: created.points.map((p) => p.name).join(" → "),
       round_trip: Boolean(args.round_trip),
       ...s,
+      vehicle: { fuel, consumption, assumed },
+      // Аргументы вызова — карточка повторяет его с другим расходом/топливом (кнопка «Пересчитать»).
+      args: { ...args, fuel, consumption },
       url: roadbookUrl,
       locale: args.locale ?? null,
       source: "OpenVan.camp roadbook (CC BY 4.0)",

@@ -104,14 +104,14 @@ body{font-family:var(--ov-font);color:var(--ov-text);font-size:14px;line-height:
 export const BRIDGE_JS = `
 (function(){
   var LOCALES=${JSON.stringify(UI_LOCALES)};
-  var pending={},nextId=1,handlers=[],lastData=null,ctx={},rendered=false;
+  var pending={},nextId=1,handlers=[],inputHandlers=[],lastInput=null,lastData=null,ctx={},rendered=false;
   var oa=window.openai;
   function post(m){try{window.parent.postMessage(m,"*")}catch(e){}}
-  function request(method,params){
+  function request(method,params,timeoutMs){
     return new Promise(function(res,rej){
       var id=nextId++;pending[id]={res:res,rej:rej};
       post({jsonrpc:"2.0",id:id,method:method,params:params||{}});
-      setTimeout(function(){if(pending[id]){delete pending[id];rej(new Error("timeout"))}},10000);
+      setTimeout(function(){if(pending[id]){delete pending[id];rej(new Error("timeout"))}},timeoutMs||10000);
     });
   }
   function notify(method,params){post({jsonrpc:"2.0",method:method,params:params||{}})}
@@ -147,6 +147,7 @@ export const BRIDGE_JS = `
       else if(!rendered)fallback(r);
       return;
     }
+    if(m.method==="ui/notifications/tool-input"){var ia=(m.params||{}).arguments;if(ia){lastInput=ia;inputHandlers.forEach(function(fn){try{fn(ia)}catch(e){console.error(e)}})}return}
     if(m.method==="ui/notifications/host-context-changed"){applyCtx(m.params);return}
     if(m.method&&m.id!=null){post({jsonrpc:"2.0",id:m.id,result:{}})}
   });
@@ -174,6 +175,9 @@ export const BRIDGE_JS = `
   }
   window.OV={
     onData:function(fn){handlers.push(fn);if(lastData)fn(lastData,ctx)},
+    /** Аргументы вызова — приходят раньше результата (хост рисует карточку, пока инструмент работает). */
+    onInput:function(fn){inputHandlers.push(fn);if(lastInput)fn(lastInput)},
+    hasData:function(){return rendered},
     locale:locale,
     /** Полная локаль хоста (en-US): по региону выбираем °F и мили. */
     hostLocale:function(){return String(ctx.locale||(oa&&oa.locale)||navigator.language||"en")},
@@ -184,6 +188,11 @@ export const BRIDGE_JS = `
     openLink:function(url){
       if(oa&&oa.openExternal){try{oa.openExternal({href:url});return}catch(e){}}
       request("ui/open-link",{url:url}).catch(function(){window.open(url,"_blank","noopener")});
+    },
+    /** Вызвать инструмент нашего сервера из карточки; resolve(structuredContent). */
+    callTool:function(name,args){
+      if(oa&&oa.callTool){return Promise.resolve(oa.callTool(name,args)).then(function(r){return r&&(r.structuredContent||r)})}
+      return request("tools/call",{name:name,arguments:args},90000).then(function(r){if(r&&r.isError)throw new Error("tool error");return r&&r.structuredContent});
     },
     ask:function(text){
       if(oa&&oa.sendFollowUpMessage){try{oa.sendFollowUpMessage({prompt:text});return}catch(e){}}
@@ -197,6 +206,7 @@ export const BRIDGE_JS = `
 
   if(oa){
     applyCtx({theme:oa.theme,locale:oa.locale});
+    if(oa.toolInput){lastInput=oa.toolInput}
     if(oa.toolOutput)setTimeout(function(){emit(oa.toolOutput)},0);
     window.addEventListener("openai:set_globals",function(e){
       var g=(e.detail&&e.detail.globals)||{};
