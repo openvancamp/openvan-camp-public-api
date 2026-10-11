@@ -2,6 +2,11 @@
 
 ## 2026-10-11
 
+### Changed — MCP server v0.8.2
+- Trip card: currency switch (EUR, USD and the currencies of the countries on the way); switching re-runs
+  `plan_road_trip` with that currency. The typical-camper fuel estimate stays marked until the user sets their own
+  consumption or fuel.
+
 ### Changed — MCP server v0.8.1
 - `plan_road_trip` without a consumption estimates fuel for a typical camper (the same default as the OpenVan roadbook
   wizard, diesel 10 l/100 km) instead of leaving the fuel cost empty; the assumption is marked in the card and in the text.

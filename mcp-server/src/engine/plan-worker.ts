@@ -107,6 +107,9 @@ try {
     first_day: iso(vm.days?.[0]?.date),
     end_date: iso(vm.end),
     currency: rate ? currency : "EUR",
+    // Выбор валюты в карточке: EUR, USD и валюты стран на пути — только те, для которых есть курс.
+    currency_options: [...new Set(["EUR", "USD", ...((vm.cards ?? []) as Array<{ cc: string }>).map((c) => (payload as { currencies?: Record<string, string> }).currencies?.[c.cc]).filter(Boolean)])]
+      .filter((c) => c === "EUR" || payload.rates?.[c as string]),
     totals: vm.totals
       ? {
           fuel: toCur(vm.totals.fuel),

@@ -125,6 +125,7 @@ function runPlan(data: Record<string, unknown>): Promise<{ ok: boolean; summary?
 }
 
 type Summary = {
+  currency_options?: string[];
   distance_km: number | null;
   hours: number | null;
   drive_days: number | null;
@@ -330,7 +331,7 @@ export async function planRoadTrip(args: Args) {
       ...s,
       vehicle: { fuel, consumption, assumed },
       // Аргументы вызова — карточка повторяет его с другим расходом/топливом (кнопка «Пересчитать»).
-      args: { ...args, fuel, consumption },
+      args: { ...args },
       url: roadbookUrl,
       locale: args.locale ?? null,
       source: "OpenVan.camp roadbook (CC BY 4.0)",
