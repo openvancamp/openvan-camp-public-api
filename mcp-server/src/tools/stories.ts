@@ -42,7 +42,7 @@ export const searchStoriesInput = {
   locale: z
     .enum(["en", "ru", "de", "fr", "es", "pt", "tr"])
     .default("en")
-    .describe("Language of headlines and summaries."),
+    .describe("Language of the conversation with the user: headlines, summaries and the card come in it. Always pass it when the user writes in one of these languages."),
   limit: z.number().int().min(1).max(20).default(10),
 };
 
@@ -71,7 +71,10 @@ export async function searchStories(args: {
 
   const { stories, pagination } = parsed.data;
   if (stories.length === 0) {
-    return { content: [{ type: "text" as const, text: "No stories match the filter." }] };
+    return {
+      content: [{ type: "text" as const, text: "No stories match the filter." }],
+      structuredContent: { query: args.search ?? null, total: 0, stories: [], url: `${SITE}/${args.locale}/news`, locale: args.locale, source: "OpenVan.camp (CC BY 4.0)" },
+    };
   }
 
   const lines = stories.map(

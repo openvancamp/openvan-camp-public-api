@@ -1,4 +1,4 @@
-import { page, SITE } from "./bridge.js";
+import { page, SITE, UI_BASE } from "./bridge.js";
 import { COUNTRY_JS } from "./snippets.js";
 
 /**
@@ -10,9 +10,9 @@ import { COUNTRY_JS } from "./snippets.js";
  */
 
 export const MONEY_WIDGETS = {
-  fuel: "ui://openvan/fuel.html",
-  food: "ui://openvan/food-prices.html",
-  currency: "ui://openvan/currency.html",
+  fuel: `${UI_BASE}fuel.html`,
+  food: `${UI_BASE}food-prices.html`,
+  currency: `${UI_BASE}currency.html`,
 } as const;
 
 /** Общий JS: форматирование денег и пересчёт по курсам «единиц валюты за 1 EUR». */
@@ -33,6 +33,8 @@ function num(v,d){if(v==null||isNaN(v))return "—";try{return new Intl.NumberFo
 
 const MONEY_CSS = `
 .seg-host{margin-left:auto}
+.hero-row{flex-wrap:wrap}
+@media (max-width:420px){.seg-host{margin-left:0}}
 .rows{list-style:none;margin:0;padding:6px 0}
 .r{display:flex;align-items:center;gap:10px;padding:9px 16px;min-height:44px}
 .r+.r{border-top:1px solid var(--ov-border)}
@@ -144,7 +146,7 @@ const FOOD_CSS = `
 .cmp .track{flex:1;height:10px;border-radius:5px;background:var(--ov-bg2);overflow:hidden}
 .cmp .track i{display:block;height:100%;border-radius:5px}
 .cmp .n{width:44px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
-.cmp .who{width:110px;display:flex;align-items:center;gap:6px;min-width:0}
+.cmp .who{width:140px;display:flex;align-items:center;gap:6px;min-width:0}
 `;
 
 const FOOD_JS = `

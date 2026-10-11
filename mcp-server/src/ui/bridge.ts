@@ -9,7 +9,16 @@
  * Своих сетевых запросов карточка не делает — только картинки с доменов из CSP.
  */
 
+import { VERSION } from "../config.js";
+
 export const SITE = "https://openvan.camp";
+
+/**
+ * Адрес карточки содержит версию сервера. Хосты (Claude, ChatGPT) кешируют HTML карточки по
+ * её ui://-адресу: при неизменном адресе правки карточек до людей не доходят (11.10.2026 Claude
+ * показывал карточку погоды 0.8.0 без блока городов). Новая версия — новый адрес.
+ */
+export const UI_BASE = `ui://openvan/${VERSION}/`;
 
 /** Языки сайта; язык хоста вне списка → английский. */
 export const UI_LOCALES = ["en", "ru", "de", "fr", "es", "pt", "tr"] as const;
@@ -151,10 +160,18 @@ export const BRIDGE_JS = `
     if(m.method==="ui/notifications/host-context-changed"){applyCtx(m.params);return}
     if(m.method&&m.id!=null){post({jsonrpc:"2.0",id:m.id,result:{}})}
   });
+  var NODATA={en:"No data for this request",ru:"Нет данных по этому запросу",de:"Keine Daten zu dieser Anfrage",fr:"Pas de données pour cette demande",es:"No hay datos para esta solicitud",pt:"Sem dados para este pedido",tr:"Bu istek için veri yok"};
+  // Ответ без данных для карточки (ошибка или «ничего не нашлось»): заголовок на языке человека,
+  // ниже — текст ответа как есть. rendered=true — карточки, которые ждут результат, перестают ждать.
   function fallback(r){
-    var txt=(r.content||[]).filter(function(c){return c.type==="text"}).map(function(c){return c.text}).join("\\n");
+    rendered=true;
+    var txt=(r.content||[]).filter(function(c){return c.type==="text"}).map(function(c){return c.text}).join("\\n").replace(/_Data: OpenVan[^\\n]*/g,"").trim();
     var el=document.getElementById("app");
-    if(el&&txt){el.innerHTML="";var pre=document.createElement("div");pre.className="card body";pre.style.whiteSpace="pre-wrap";pre.textContent=txt;el.appendChild(pre);sizeSoon()}
+    if(!el)return;
+    el.innerHTML='<div class="card"><div class="hero"><h1 class="h1"></h1></div><div class="body"><div class="muted" style="white-space:pre-wrap"></div></div></div>';
+    el.querySelector("h1").textContent=NODATA[locale()]||NODATA.en;
+    el.querySelector(".muted").textContent=txt;
+    sizeSoon();
   }
   var lastH=0,sizeTimer=null;
   function size(){
@@ -180,10 +197,12 @@ export const BRIDGE_JS = `
     hasData:function(){return rendered},
     locale:locale,
     /** Полная локаль хоста (en-US): по региону выбираем °F и мили. */
-    hostLocale:function(){return String(ctx.locale||(oa&&oa.locale)||navigator.language||"en")},
+    // Формат чисел и дат — по языку разговора (84,58 TRY на русском), а не по интерфейсу хоста.
+    hostLocale:function(){return String(ctx.dataLocale||ctx.locale||(oa&&oa.locale)||navigator.language||"en")},
+    hostRegionLocale:function(){return String(ctx.locale||(oa&&oa.locale)||navigator.language||"en")},
     // Мили и °F — только для англоязычного разговора в США; русский текст с английским
     // интерфейсом Claude (регион en-US) получает °C и км/ч.
-    imperial:function(){if(ctx.dataLocale&&ctx.dataLocale!=="en")return false;return /-(US|LR|MM)$/i.test(this.hostLocale())},
+    imperial:function(){if(ctx.dataLocale&&ctx.dataLocale!=="en")return false;return /-(US|LR|MM)$/i.test(this.hostRegionLocale())},
     t:function(dict,key){var l=locale();return (dict[l]&&dict[l][key])||(dict.en&&dict.en[key])||key},
     openLink:function(url){
       if(oa&&oa.openExternal){try{oa.openExternal({href:url});return}catch(e){}}
@@ -206,7 +225,8 @@ export const BRIDGE_JS = `
 
   if(oa){
     applyCtx({theme:oa.theme,locale:oa.locale});
-    if(oa.toolInput){lastInput=oa.toolInput}
+    // Результат уже есть (ChatGPT отдаёт карточку после ответа) — «аргументы до результата» не нужны.
+    if(oa.toolInput&&!oa.toolOutput){lastInput=oa.toolInput}
     if(oa.toolOutput)setTimeout(function(){emit(oa.toolOutput)},0);
     window.addEventListener("openai:set_globals",function(e){
       var g=(e.detail&&e.detail.globals)||{};

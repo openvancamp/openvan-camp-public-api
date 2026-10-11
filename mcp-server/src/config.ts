@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-export const VERSION = "0.8.2";
+export const VERSION = "0.8.3";
 
 export const BASE_URL = process.env.OPENVAN_API_URL ?? "https://openvan.camp";
 

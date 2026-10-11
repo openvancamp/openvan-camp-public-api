@@ -70,7 +70,7 @@ export const listEventsInput = {
   locale: z
     .enum(["en", "ru", "de", "fr", "es", "pt", "tr"])
     .default("en")
-    .describe("Language for localized fields."),
+    .describe("Language of the conversation with the user: event names, cities and the card come in it. Always pass it when the user writes in one of these languages."),
   limit: z.number().int().min(1).max(50).default(15),
 };
 
@@ -102,6 +102,7 @@ export async function listEvents(args: {
   if (events.length === 0) {
     return {
       content: [{ type: "text" as const, text: `No ${args.status} events match the filter.` }],
+      structuredContent: { status: args.status, total: 0, events: [], locale: args.locale, source: SOURCE },
     };
   }
 
@@ -120,6 +121,7 @@ export async function listEvents(args: {
       status: args.status,
       total: pagination?.total ?? events.length,
       events: events.map(cardEvent),
+      locale: args.locale,
       source: SOURCE,
     },
   };
@@ -139,7 +141,8 @@ export const getEventInput = {
   slug: z.string().describe("Event slug, e.g. caravan-salon-duesseldorf-2026."),
   locale: z
     .enum(["en", "ru", "de", "fr", "es", "pt", "tr"])
-    .default("en"),
+    .default("en")
+    .describe("Language of the conversation with the user. Always pass it when the user writes in one of these languages."),
 };
 
 export async function getEvent({ slug, locale }: { slug: string; locale: string }) {
@@ -185,6 +188,7 @@ export async function getEvent({ slug, locale }: { slug: string; locale: string 
           official_url: e.official_url ?? null,
           summary: (e.summary ?? e.description ?? "").slice(0, 600) || null,
         },
+        locale,
         source: SOURCE,
       },
     };

@@ -23,7 +23,10 @@ function wIcon(code,size){
 
 /** Название страны на языке хоста (Intl), иначе — запасное имя из данных. */
 export const COUNTRY_JS = `
+// Территории без ISO-кода (Северный Кипр, Иракский Курдистан): Intl их не знает — названия с сайта.
+var EXTRA_NAMES={XN:{en:"Turkish Republic of Northern Cyprus",ru:"Турецкая Республика Северного Кипра",de:"Türkische Republik Nordzypern",fr:"République turque de Chypre du Nord",es:"República Turca del Norte de Chipre",pt:"República Turca de Chipre do Norte",tr:"Kuzey Kıbrıs Türk Cumhuriyeti"},KU:{en:"Kurdistan Region",ru:"Иракский Курдистан",de:"Irakisch-Kurdistan",fr:"Kurdistan irakien",es:"Kurdistán iraquí",pt:"Curdistão iraquiano",tr:"Irak Kürdistanı"}};
 function cName(cc,fallback){
+  var x=EXTRA_NAMES[String(cc).toUpperCase()];if(x)return x[OV.locale()]||x.en;
   try{var n=new Intl.DisplayNames([OV.locale()],{type:"region"}).of(String(cc).toUpperCase());if(n&&n.toUpperCase()!==String(cc).toUpperCase())return n}catch(e){}
   return fallback||cc;
 }

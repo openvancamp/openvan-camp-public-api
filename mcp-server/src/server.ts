@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 
+import { OpenVanApiError } from "./client.js";
 import { ATTRIBUTION_FOOTER, VERSION } from "./config.js";
 import {
   getFuelPrices,
@@ -93,7 +94,21 @@ const readOnlyAnnotations = (title: string): ToolAnnotations => ({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function withAttribution<A extends any[], R>(handler: (...args: A) => Promise<R>) {
   return async (...args: A): Promise<R> => {
-    const result = await handler(...args);
+    let result: R;
+    try {
+      result = await handler(...args);
+    } catch (e) {
+      // Ошибка API — понятным текстом, а не «HTTP 404 from /api/…» (его видит человек в карточке).
+      if (!(e instanceof OpenVanApiError)) throw e;
+      const body = (e.body ?? {}) as { message?: string; error?: string };
+      const reason = typeof body.message === "string" ? body.message : typeof body.error === "string" && body.error.length > 12 ? body.error : null;
+      const text =
+        e.status === 404 ? `No data for this request${reason ? `: ${reason}` : ""}. It means OpenVan.camp has no data for it, not that nothing applies.`
+        : e.status === 429 ? "Too many requests right now — retry in a minute."
+        : e.status >= 500 ? "OpenVan.camp is temporarily unavailable — retry in a minute."
+        : reason ?? "The request could not be completed — check the arguments.";
+      return { content: [{ type: "text", text }], isError: true } as R;
+    }
     const r = result as { isError?: boolean; content?: Array<{ type: string; text?: string }> };
     if (r?.isError || !Array.isArray(r?.content)) return result;
     const last = [...r.content].reverse().find((c) => c.type === "text" && typeof c.text === "string");
@@ -109,6 +124,9 @@ function withAttribution<A extends any[], R>(handler: (...args: A) => Promise<R>
  * сверху: модель передаёт язык, на котором пишет человек, и карточка говорит на нём,
  * даже если интерфейс Claude/ChatGPT у человека на другом языке.
  */
+const LOCALE_HINT =
+  "Language the user writes in (en, ru, de, fr, es, pt, tr). Set it on every call: the answer and the interactive card are shown in this language and units; without it the card falls back to the app's interface language.";
+
 const CARD_LOCALE = z
   .enum(["en", "ru", "de", "fr", "es", "pt", "tr"])
   .optional()
@@ -145,6 +163,21 @@ export function createServer(): McpServer {
     name: "openvan-mcp",
     version: VERSION,
   });
+
+  // locale — первым параметром и с одним описанием у всех инструментов. Без него карточка
+  // говорит на языке интерфейса хоста: 11.10.2026 Claude с английским интерфейсом показал
+  // русскоязычному человеку карточку на английском и в °F. Обязательным не делаем: скрипты,
+  // которые зовут инструменты без locale, сломались бы.
+  const register = server.registerTool.bind(server) as (...a: unknown[]) => unknown;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (server as any).registerTool = (name: string, config: { inputSchema?: Record<string, z.ZodTypeAny> }, cb: unknown) => {
+    const shape = config.inputSchema;
+    if (shape && shape.locale) {
+      const { locale, ...rest } = shape;
+      config = { ...config, inputSchema: { locale: locale.describe(LOCALE_HINT), ...rest } };
+    }
+    return register(name, config, cb);
+  };
 
   // Сводка по поездке — первым в списке: это самый частый живой вопрос («едем из A в B»).
   server.registerTool(

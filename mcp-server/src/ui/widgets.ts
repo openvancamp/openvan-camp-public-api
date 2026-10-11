@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import { page, SITE } from "./bridge.js";
+import { page, SITE, UI_BASE } from "./bridge.js";
 import { MONEY_HTML, MONEY_WIDGETS } from "./money.js";
 import { TRAVEL_HTML, TRAVEL_WIDGETS, TRIP_WIDGET } from "./travel.js";
 import { COUNTRY_JS, WEATHER_ICON_JS } from "./snippets.js";
@@ -17,9 +17,9 @@ import { COUNTRY_JS, WEATHER_ICON_JS } from "./snippets.js";
 export const MIME = "text/html;profile=mcp-app";
 
 export const WIDGETS = {
-  weather: "ui://openvan/country-weather.html",
-  bestWeather: "ui://openvan/best-weather.html",
-  events: "ui://openvan/events.html",
+  weather: `${UI_BASE}country-weather.html`,
+  bestWeather: `${UI_BASE}best-weather.html`,
+  events: `${UI_BASE}events.html`,
   ...MONEY_WIDGETS,
   ...TRAVEL_WIDGETS,
   trip: TRIP_WIDGET,
@@ -79,7 +79,7 @@ const INDEX_I18N = {"en": {"title": "VanSky Index","description": "A weather com
 const WEATHER_CSS = `
 .unit{position:absolute;top:12px;right:12px}
 .wx-now{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
-.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
 .metric{background:var(--ov-bg2);border-radius:var(--ov-radius-sm);padding:8px 10px;min-width:0}
 .metric b{display:block;font-size:16px;font-weight:700;color:var(--ov-text)}
 .metric span{font-size:11px;color:var(--ov-text3)}
@@ -141,7 +141,8 @@ function render(d){
   h+='<div class="metric"><b>'+(d.sleep_score==null?"—":d.sleep_score)+'</b><span>'+t("sleep")+' /100</span></div>';
   h+='<div class="metric"><b>'+(d.drive_score==null?"—":d.drive_score)+'</b><span>'+t("drive")+' /100</span></div>';
   h+='<div class="metric"><b>'+(d.solar_kwh==null?"—":Number(d.solar_kwh).toFixed(1))+'</b><span>'+t("solar")+', '+t("kwh")+'</span></div>';
-  h+='<div class="metric"><b>'+(d.sea_temp==null?"—":deg(d.sea_temp))+'</b><span>'+t("sea")+'</span></div></div>';
+  if(d.sea_temp!=null)h+='<div class="metric"><b>'+deg(d.sea_temp)+'</b><span>'+t("sea")+'</span></div>';
+  h+='</div>';
   var fc=(d.forecast||[]).slice(0,7);
   if(fc.length){h+='<div class="fc">';fc.forEach(function(f){h+='<div><div class="d">'+E(dow(f.date))+'</div><div class="i">'+(f.weather_code!=null?wIcon(f.weather_code,20):'<b style="font-size:13px;color:'+(LABEL_COLOR[f.label]||"inherit")+'">'+f.score+'</b>')+'</div><div class="t">'+deg(f.temp_day)+'</div>'+(f.temp_night!=null?'<div class="n">'+deg(f.temp_night)+'</div>':'')+'<div class="bar" title="'+(f.score||"")+'" style="background:'+(LABEL_COLOR[f.label]||"var(--ov-border)")+'"></div></div>'});h+='</div>'}
   var notes=[];
@@ -254,13 +255,13 @@ document.addEventListener("click",function(e){
 // ------------------------------------------------------------------
 
 const EVENTS_I18N = {
-  en: { upcoming: "Upcoming vanlife events", ongoing: "Events happening now", past: "Past events", all: "Vanlife events", found: "{n} found", all_events: "All events", details: "Details", on_site: "On OpenVan", official: "Official site", organizer: "Organizer", price: "Admission", tba: "Dates TBA", expo: "Expo", festival: "Festival", forum: "Forum", meetup: "Meetup", roadtrip: "Road trip" },
-  ru: { upcoming: "Ближайшие события", ongoing: "События сейчас", past: "Прошедшие события", all: "События", found: "найдено: {n}", all_events: "Все события", details: "Подробнее", on_site: "На OpenVan", official: "Официальный сайт", organizer: "Организатор", price: "Вход", tba: "Даты уточняются", expo: "Выставка", festival: "Фестиваль", forum: "Форум", meetup: "Встреча", roadtrip: "Автопробег" },
-  de: { upcoming: "Kommende Vanlife-Events", ongoing: "Events gerade jetzt", past: "Vergangene Events", all: "Vanlife-Events", found: "{n} gefunden", all_events: "Alle Events", details: "Details", on_site: "Auf OpenVan", official: "Offizielle Website", organizer: "Veranstalter", price: "Eintritt", tba: "Termin folgt", expo: "Messe", festival: "Festival", forum: "Forum", meetup: "Treffen", roadtrip: "Roadtrip" },
-  fr: { upcoming: "Événements vanlife à venir", ongoing: "Événements en cours", past: "Événements passés", all: "Événements vanlife", found: "{n} trouvés", all_events: "Tous les événements", details: "Détails", on_site: "Sur OpenVan", official: "Site officiel", organizer: "Organisateur", price: "Entrée", tba: "Dates à venir", expo: "Salon", festival: "Festival", forum: "Forum", meetup: "Rencontre", roadtrip: "Road trip" },
-  es: { upcoming: "Próximos eventos vanlife", ongoing: "Eventos en curso", past: "Eventos pasados", all: "Eventos vanlife", found: "{n} encontrados", all_events: "Todos los eventos", details: "Detalles", on_site: "En OpenVan", official: "Web oficial", organizer: "Organizador", price: "Entrada", tba: "Fechas por confirmar", expo: "Feria", festival: "Festival", forum: "Foro", meetup: "Encuentro", roadtrip: "Ruta" },
-  pt: { upcoming: "Próximos eventos vanlife", ongoing: "Eventos a decorrer", past: "Eventos passados", all: "Eventos vanlife", found: "{n} encontrados", all_events: "Todos os eventos", details: "Detalhes", on_site: "No OpenVan", official: "Site oficial", organizer: "Organizador", price: "Entrada", tba: "Datas a confirmar", expo: "Feira", festival: "Festival", forum: "Fórum", meetup: "Encontro", roadtrip: "Road trip" },
-  tr: { upcoming: "Yaklaşan karavan etkinlikleri", ongoing: "Şu an süren etkinlikler", past: "Geçmiş etkinlikler", all: "Karavan etkinlikleri", found: "{n} bulundu", all_events: "Tüm etkinlikler", details: "Ayrıntılar", on_site: "OpenVan’da", official: "Resmî site", organizer: "Organizatör", price: "Giriş", tba: "Tarih belli değil", expo: "Fuar", festival: "Festival", forum: "Forum", meetup: "Buluşma", roadtrip: "Yol gezisi" },
+  en: { none: "No events found for this request.", upcoming: "Upcoming vanlife events", ongoing: "Events happening now", past: "Past events", all: "Vanlife events", found: "{n} found", all_events: "All events", details: "Details", on_site: "On OpenVan", official: "Official site", organizer: "Organizer", price: "Admission", tba: "Dates TBA", expo: "Expo", festival: "Festival", forum: "Forum", meetup: "Meetup", roadtrip: "Road trip" },
+  ru: { none: "По этому запросу событий нет.", upcoming: "Ближайшие события", ongoing: "События сейчас", past: "Прошедшие события", all: "События", found: "найдено: {n}", all_events: "Все события", details: "Подробнее", on_site: "На OpenVan", official: "Официальный сайт", organizer: "Организатор", price: "Вход", tba: "Даты уточняются", expo: "Выставка", festival: "Фестиваль", forum: "Форум", meetup: "Встреча", roadtrip: "Автопробег" },
+  de: { none: "Keine Events zu dieser Anfrage.", upcoming: "Kommende Vanlife-Events", ongoing: "Events gerade jetzt", past: "Vergangene Events", all: "Vanlife-Events", found: "{n} gefunden", all_events: "Alle Events", details: "Details", on_site: "Auf OpenVan", official: "Offizielle Website", organizer: "Veranstalter", price: "Eintritt", tba: "Termin folgt", expo: "Messe", festival: "Festival", forum: "Forum", meetup: "Treffen", roadtrip: "Roadtrip" },
+  fr: { none: "Aucun événement pour cette recherche.", upcoming: "Événements vanlife à venir", ongoing: "Événements en cours", past: "Événements passés", all: "Événements vanlife", found: "{n} trouvés", all_events: "Tous les événements", details: "Détails", on_site: "Sur OpenVan", official: "Site officiel", organizer: "Organisateur", price: "Entrée", tba: "Dates à venir", expo: "Salon", festival: "Festival", forum: "Forum", meetup: "Rencontre", roadtrip: "Road trip" },
+  es: { none: "No hay eventos para esta búsqueda.", upcoming: "Próximos eventos vanlife", ongoing: "Eventos en curso", past: "Eventos pasados", all: "Eventos vanlife", found: "{n} encontrados", all_events: "Todos los eventos", details: "Detalles", on_site: "En OpenVan", official: "Web oficial", organizer: "Organizador", price: "Entrada", tba: "Fechas por confirmar", expo: "Feria", festival: "Festival", forum: "Foro", meetup: "Encuentro", roadtrip: "Ruta" },
+  pt: { none: "Sem eventos para este pedido.", upcoming: "Próximos eventos vanlife", ongoing: "Eventos a decorrer", past: "Eventos passados", all: "Eventos vanlife", found: "{n} encontrados", all_events: "Todos os eventos", details: "Detalhes", on_site: "No OpenVan", official: "Site oficial", organizer: "Organizador", price: "Entrada", tba: "Datas a confirmar", expo: "Feira", festival: "Festival", forum: "Fórum", meetup: "Encontro", roadtrip: "Road trip" },
+  tr: { none: "Bu arama için etkinlik yok.", upcoming: "Yaklaşan karavan etkinlikleri", ongoing: "Şu an süren etkinlikler", past: "Geçmiş etkinlikler", all: "Karavan etkinlikleri", found: "{n} bulundu", all_events: "Tüm etkinlikler", details: "Ayrıntılar", on_site: "OpenVan’da", official: "Resmî site", organizer: "Organizatör", price: "Giriş", tba: "Tarih belli değil", expo: "Fuar", festival: "Festival", forum: "Forum", meetup: "Buluşma", roadtrip: "Yol gezisi" },
 };
 
 const EVENTS_CSS = `
@@ -310,6 +311,7 @@ function where(e){return [e.city,cName(e.country_code,e.country_name)].filter(Bo
 function renderList(d){
   var evs=d.events||[];
   var h='<div class="card"><div class="hero"><div class="head"><div><h1 class="h1">'+t(d.status||"upcoming")+'</h1><div class="sub">'+E(t("found").replace("{n}",d.total||evs.length))+'</div></div></div></div><div class="rail">';
+  if(!evs.length)h+='<div class="body" style="padding:16px">'+E(t("none"))+'</div>';
   evs.forEach(function(e,i){
     h+='<button class="ev" data-i="'+i+'">'+media(e)+'<div class="ev-body"><div class="ev-name">'+E(e.name)+'</div><div class="muted">'+E(range(e.start,e.end))+'</div><div class="ev-where">'+flag(e.country_code,"flag-sm")+'<span class="ellipsis">'+E(where(e))+'</span></div></div></button>';
   });

@@ -2,6 +2,17 @@
 
 ## 2026-10-11
 
+### Fixed — MCP server v0.8.3
+- Card templates now live at versioned URIs (`ui://openvan/<version>/…`): hosts cache a card's HTML by its URI, so
+  card updates did not reach users who connected earlier.
+- `locale` is the first argument of every tool with one clear description (the card's language and units follow it).
+- Localization: place names in trip and toll-route cards come in the conversation language; territories without an ISO
+  name (Northern Cyprus, Iraqi Kurdistan); visa confidence; event cards follow `locale`; English-only source texts are
+  hidden on other languages; numbers are formatted for the conversation language.
+- Readable errors instead of `HTTP 404 from /api/…`; cards no longer hang on "building" when the tool fails; empty
+  event/news results get a card; a vehicle class without tariff data says so instead of showing nothing.
+- City search ranks bigger places first (Paris → France, London → England).
+
 ### Changed — MCP server v0.8.2
 - Trip card: currency switch (EUR, USD and the currencies of the countries on the way); switching re-runs
   `plan_road_trip` with that currency. The typical-camper fuel estimate stays marked until the user sets their own
