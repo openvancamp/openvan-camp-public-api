@@ -116,11 +116,11 @@ function renderOverview(d){
   });
   document.getElementById("app").innerHTML=h+'</ul>'+foot(d);
 }
-function render(){var d=current;if(!d)return;if(shown==null||choices(d).indexOf(shown)<0)shown=d.mode==="country"&&d.local_currency?d.local_currency:"EUR";
+function render(){var d=current;if(!d)return;if(shown==null||choices(d).indexOf(shown)<0){var pref=OV.state.get("fuelCur");shown=pref&&choices(d).indexOf(pref)>=0?pref:d.mode==="country"&&d.local_currency?d.local_currency:"EUR"}
   if(d.mode==="country")renderCountry(d);else if(d.mode==="overview")renderOverview(d);else renderRanking(d)}
 OV.onData(function(d){current=d;render()});
 document.addEventListener("click",function(e){
-  var c=e.target.closest("[data-cur]");if(c){shown=c.getAttribute("data-cur");render();return}
+  var c=e.target.closest("[data-cur]");if(c){if(c.getAttribute("data-cur")===shown)return;shown=c.getAttribute("data-cur");OV.state.set({fuelCur:shown});OV.updateContext("The user switched the OpenVan fuel price card to "+shown+": quote fuel prices in "+shown+" from now on.");render();return}
   var a=e.target.closest("[data-act]");if(!a||!current)return;e.preventDefault();
   OV.openLink(a.getAttribute("data-act")==="open"?OV.siteUrl(current.url):"${SITE}/"+OV.locale());
 });

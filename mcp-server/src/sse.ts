@@ -20,7 +20,7 @@ import { randomUUID } from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 
 import { VERSION } from "./config.js";
-import { createServer, LEGACY_TOOL_NAMES } from "./server.js";
+import { createServer, hostFromUserAgent, LEGACY_TOOL_NAMES } from "./server.js";
 import { extractToolCalls, logToolCall } from "./telemetry.js";
 
 const HOST = process.env.OPENVAN_MCP_HOST ?? "127.0.0.1";
@@ -71,7 +71,7 @@ async function main() {
   // Main MCP transport. Stateless: each request gets a fresh transport +
   // server instance. Fine for read-only tools with no per-session state.
   const handleMcp = async (req: express.Request, res: express.Response) => {
-    const server = createServer();
+    const server = createServer(hostFromUserAgent(req.headers["user-agent"]));
     const transport = new StreamableHTTPServerTransport({
       // Stateless mode — no session tracking.
       sessionIdGenerator: undefined,

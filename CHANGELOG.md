@@ -2,6 +2,18 @@
 
 ## 2026-10-11
 
+### Added — MCP server v0.9.0
+- Server `instructions`, `title`, `websiteUrl` and icons in the initialize result: the model is told to call
+  `plan_road_trip` first for an A→B trip and to always pass `locale`.
+- Every tool declares an `outputSchema` and returns `structuredContent`.
+- "No data" answers (unknown country, event or city, missing customs/holiday/toll data, no road route) are normal results
+  with `structuredContent.nodata` instead of `isError`; errors are kept for rate limits, outages and invalid arguments.
+- When the model omits `locale`, ChatGPT's `openai/locale` request meta is used.
+- `_meta.ui.domain` is sent to ChatGPT only (Claude derives the card domain from the connector URL).
+- Trip card: passport chips (recalculates visas for another passport), full-screen mode where the host supports it,
+  recalculations are reported to the model (`ui/update-model-context`, ChatGPT widget state) and survive a re-render.
+- Fuel card remembers the chosen currency.
+
 ### Fixed — MCP server v0.8.3
 - Card templates now live at versioned URIs (`ui://openvan/<version>/…`): hosts cache a card's HTML by its URI, so
   card updates did not reach users who connected earlier.

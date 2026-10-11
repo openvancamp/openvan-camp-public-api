@@ -94,6 +94,7 @@ const readOnlyAnnotations = (title: string): ToolAnnotations => ({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function withAttribution<A extends any[], R>(handler: (...args: A) => Promise<R>) {
   return async (...args: A): Promise<R> => {
+    const locale = (args[0] as { locale?: string } | undefined)?.locale;
     let result: R;
     try {
       result = await handler(...args);
@@ -107,10 +108,18 @@ function withAttribution<A extends any[], R>(handler: (...args: A) => Promise<R>
         : e.status === 429 ? "Too many requests right now — retry in a minute."
         : e.status >= 500 ? "OpenVan.camp is temporarily unavailable — retry in a minute."
         : reason ?? "The request could not be completed — check the arguments.";
+      if (e.status === 404) return noData(text, locale) as R;
       return { content: [{ type: "text", text }], isError: true } as R;
     }
-    const r = result as { isError?: boolean; content?: Array<{ type: string; text?: string }> };
-    if (r?.isError || !Array.isArray(r?.content)) return result;
+    const r = result as { isError?: boolean; content?: Array<{ type: string; text?: string }>; structuredContent?: Record<string, unknown> };
+    if (!Array.isArray(r?.content)) return result;
+    if (r.isError) {
+      const msg = r.content.find((c) => c.type === "text")?.text ?? "";
+      if (NO_DATA.test(msg)) return noData(msg, locale) as R;
+      return result;
+    }
+    // С outputSchema SDK требует structuredContent у каждого успешного ответа.
+    if (!r.structuredContent) r.structuredContent = { message: r.content.find((c) => c.type === "text")?.text ?? "" };
     const last = [...r.content].reverse().find((c) => c.type === "text" && typeof c.text === "string");
     if (last && !last.text!.includes("OpenVan.camp (CC BY 4.0)")) {
       last.text += ATTRIBUTION_FOOTER;
@@ -118,6 +127,29 @@ function withAttribution<A extends any[], R>(handler: (...args: A) => Promise<R>
     return result;
   };
 }
+
+/**
+ * «Данных нет» — обычный ответ, а не сбой: каталог Claude считает долю isError и при >2%
+ * ставит коннектору «Worth a look». Ошибкой остаются только 429/5xx и неверные аргументы.
+ */
+const NO_DATA = /^(No |Event ".*" not found|Currency ".*" not found)/;
+
+function noData(message: string, locale?: string) {
+  return { content: [{ type: "text" as const, text: message }], structuredContent: { nodata: true, message, ...(locale ? { locale } : {}) } };
+}
+
+/** Схема ответа: у всех инструментов объект с произвольными полями (форму описывает карточка). */
+const LOOSE_OUTPUT = z.object({}).passthrough();
+
+/** Подсказки модели на весь коннектор (InitializeResult.instructions). */
+const INSTRUCTIONS = [
+  "OpenVan.camp: road-trip and vanlife travel data for 200+ countries, with interactive cards in Claude and ChatGPT.",
+  "Always pass locale = the language the user writes in (en, ru, de, fr, es, pt, tr): answers, cards, place names and units follow it.",
+  "When the user describes a trip from A to B (or several stops), call plan_road_trip first: it returns the whole trip (route, days, budget, visas, vehicle stay, road rules, holidays, hazards) in one call. Use the single-topic tools only for follow-up questions.",
+  "Weather: get_city_travel_weather for a city, get_country_travel_weather for a country (it also names the best and worst cities for the coming week), list_best_weather_countries to choose where to go.",
+  "A 'no data' answer means OpenVan has no data for it, not that nothing applies: never tell the user a border is open, a road is free or a date has no holidays because data is missing.",
+  "Prices in the cards are converted with fresh exchange rates; quote them as approximate and give the source link.",
+].join("\n");
 
 /**
  * Язык разговора для карточки. У инструментов, где своего locale нет, он добавлен
@@ -158,11 +190,33 @@ export const LEGACY_TOOL_NAMES: Record<string, string> = {
 /**
  * Factory shared between stdio (dist/index.js) and HTTP (dist/sse.js) entry points.
  */
-export function createServer(): McpServer {
-  const server = new McpServer({
-    name: "openvan-mcp",
-    version: VERSION,
-  });
+export type HostKind = "chatgpt" | "claude" | "other";
+
+/** Хост по User-Agent запроса: ChatGPT ходит как openai-mcp/*, Claude — Claude-User. */
+export function hostFromUserAgent(ua: string | undefined): HostKind {
+  if (!ua) return "other";
+  if (/openai-mcp|chatgpt/i.test(ua)) return "chatgpt";
+  if (/claude/i.test(ua)) return "claude";
+  return "other";
+}
+
+/** Языки, которые знают карточки и сайт. */
+const LOCALES = new Set(["en", "ru", "de", "fr", "es", "pt", "tr"]);
+
+export function createServer(host: HostKind = "other"): McpServer {
+  const server = new McpServer(
+    {
+      name: "openvan-mcp",
+      version: VERSION,
+      title: "OpenVan Travel",
+      websiteUrl: "https://openvan.camp",
+      icons: [
+        { src: "https://openvan.camp/icon/android-chrome-192x192.png", mimeType: "image/png", sizes: ["192x192"] },
+        { src: "https://openvan.camp/icon/favicon.svg", mimeType: "image/svg+xml", sizes: ["any"] },
+      ],
+    },
+    { instructions: INSTRUCTIONS }
+  );
 
   // locale — первым параметром и с одним описанием у всех инструментов. Без него карточка
   // говорит на языке интерфейса хоста: 11.10.2026 Claude с английским интерфейсом показал
@@ -170,12 +224,22 @@ export function createServer(): McpServer {
   // которые зовут инструменты без locale, сломались бы.
   const register = server.registerTool.bind(server) as (...a: unknown[]) => unknown;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (server as any).registerTool = (name: string, config: { inputSchema?: Record<string, z.ZodTypeAny> }, cb: unknown) => {
+  (server as any).registerTool = (name: string, config: { inputSchema?: Record<string, z.ZodTypeAny>; outputSchema?: unknown }, cb: (args: any, extra: any) => unknown) => {
     const shape = config.inputSchema;
     if (shape && shape.locale) {
       const { locale, ...rest } = shape;
       config = { ...config, inputSchema: { locale: locale.describe(LOCALE_HINT), ...rest } };
+      // Модель забыла locale — берём язык человека, который ChatGPT шлёт в _meta запроса.
+      const inner = cb;
+      cb = (args, extra) => {
+        if (args && !args.locale) {
+          const hostLocale = String(extra?._meta?.["openai/locale"] ?? "").slice(0, 2).toLowerCase();
+          if (LOCALES.has(hostLocale)) args = { ...args, locale: hostLocale };
+        }
+        return inner(args, extra);
+      };
     }
+    if (!config.outputSchema) config = { ...config, outputSchema: LOOSE_OUTPUT };
     return register(name, config, cb);
   };
 
@@ -546,7 +610,7 @@ export function createServer(): McpServer {
   );
 
   // Интерактивные карточки (MCP Apps) для погоды и событий
-  registerWidgets(server);
+  registerWidgets(server, host);
 
   return server;
 }

@@ -127,6 +127,8 @@ export const BRIDGE_JS = `
   function emit(data){
     if(!data||typeof data!=="object")return;
     if(typeof data.locale==="string")ctx.dataLocale=data.locale;
+    // «Нет данных» — обычный ответ инструмента, карточке рисовать нечего: показываем текст ответа.
+    if(data.nodata){fallback({content:[{type:"text",text:String(data.message||"")}]});return}
     lastData=data;rendered=true;
     handlers.forEach(function(fn){try{fn(data,ctx)}catch(e){console.error(e)}});
     sizeSoon();
@@ -142,7 +144,7 @@ export const BRIDGE_JS = `
     if(fonts&&!document.getElementById("ov-fonts")){var s=document.createElement("style");s.id="ov-fonts";s.textContent=fonts;document.head.appendChild(s)}
     var sa=c.safeAreaInsets;
     if(sa)["top","right","bottom","left"].forEach(function(p){root.style.setProperty("--ov-safe-"+p,(sa[p]||0)+"px")});
-    if(lastData&&(c.locale||c.theme))emit(lastData);
+    if(lastData&&(c.locale||c.theme||c.displayMode))emit(lastData);
   }
   window.addEventListener("message",function(e){
     var m=e.data;if(!m||m.jsonrpc!=="2.0")return;
@@ -190,7 +192,35 @@ export const BRIDGE_JS = `
     var raw=String(ctx.dataLocale||ctx.locale||(oa&&oa.locale)||navigator.language||"en").toLowerCase().slice(0,2);
     return LOCALES.indexOf(raw)>=0?raw:"en";
   }
+  // Состояние карточки (выбранная валюта, расход…): в ChatGPT — widgetState (его видит и модель),
+  // иначе localStorage на этом устройстве. Хранилище в песочнице может быть закрыто — тогда только память.
+  var SKEY="ov-state:"+document.title,state={};
+  try{state=JSON.parse(localStorage.getItem(SKEY)||"{}")||{}}catch(e){}
+  if(oa&&oa.widgetState&&typeof oa.widgetState==="object")for(var sk in oa.widgetState)state[sk]=oa.widgetState[sk];
+  function saveState(){
+    try{localStorage.setItem(SKEY,JSON.stringify(state))}catch(e){}
+    if(oa&&oa.setWidgetState)try{oa.setWidgetState(state)}catch(e){}
+  }
+  function displayModes(){return (ctx.availableDisplayModes)||[]}
   window.OV={
+    state:{
+      get:function(k){return state[k]},
+      set:function(obj){for(var k in obj){if(obj[k]==null)delete state[k];else state[k]=obj[k]}saveState()}
+    },
+    /** Сообщить модели, что человек поменял в карточке (новая валюта, пересчёт): следующий ответ её учтёт. */
+    updateContext:function(text,data){
+      if(oa){state.modelContext=text;saveState();return}
+      var params={content:[{type:"text",text:text}]};if(data)params.structuredContent=data;
+      request("ui/update-model-context",params).catch(function(){});
+    },
+    canFullscreen:function(){return !!(oa&&oa.requestDisplayMode)||displayModes().indexOf("fullscreen")>=0},
+    isFullscreen:function(){return (ctx.displayMode||(oa&&oa.displayMode))==="fullscreen"},
+    /** Развернуть на весь экран / вернуть в ленту. */
+    toggleFullscreen:function(){
+      var mode=this.isFullscreen()?"inline":"fullscreen";
+      if(oa&&oa.requestDisplayMode){Promise.resolve(oa.requestDisplayMode({mode:mode})).then(function(r){ctx.displayMode=(r&&r.mode)||mode;if(lastData)emit(lastData)}).catch(function(){});return}
+      request("ui/request-display-mode",{mode:mode}).then(function(r){ctx.displayMode=(r&&r.mode)||mode;if(lastData)emit(lastData)}).catch(function(){});
+    },
     onData:function(fn){handlers.push(fn);if(lastData)fn(lastData,ctx)},
     /** Аргументы вызова — приходят раньше результата (хост рисует карточку, пока инструмент работает). */
     onInput:function(fn){inputHandlers.push(fn);if(lastInput)fn(lastInput)},
@@ -230,7 +260,7 @@ export const BRIDGE_JS = `
     if(oa.toolOutput)setTimeout(function(){emit(oa.toolOutput)},0);
     window.addEventListener("openai:set_globals",function(e){
       var g=(e.detail&&e.detail.globals)||{};
-      if(g.theme||g.locale)applyCtx({theme:g.theme,locale:g.locale});
+      if(g.theme||g.locale||g.displayMode)applyCtx({theme:g.theme,locale:g.locale,displayMode:g.displayMode});
       if(g.toolOutput)emit(g.toolOutput);
     });
   }
@@ -238,7 +268,7 @@ export const BRIDGE_JS = `
     protocolVersion:"2026-01-26",
     appInfo:{name:"OpenVan",version:"1"},
     clientInfo:{name:"OpenVan",version:"1"},
-    appCapabilities:{availableDisplayModes:["inline"]},
+    appCapabilities:{availableDisplayModes:["inline","fullscreen"]},
     capabilities:{}
   }).then(function(r){
     applyCtx(r&&r.hostContext);

@@ -1,3 +1,4 @@
+import type { HostKind } from "../server.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { page, SITE, UI_BASE } from "./bridge.js";
@@ -29,15 +30,16 @@ export const WIDGETS = {
 const RESOURCE_DOMAINS = [SITE, "https://wsrv.nl"];
 
 /**
- * ui.domain не задаём: у Claude его формат — хеш URL коннектора, у ChatGPT — домен
- * сервиса, а одно значение для обоих хостов невозможно. Claude без него работает,
- * ChatGPT берёт домен из openai/widgetDomain.
+ * ui.domain у Claude — хеш URL коннектора, у ChatGPT — домен сервиса; одно значение для
+ * обоих невозможно, поэтому sse.ts определяет хост по User-Agent и домен получает только ChatGPT.
  */
-function resourceMeta(description: string) {
+function resourceMeta(description: string, host: HostKind) {
   return {
     ui: {
       csp: { connectDomains: [], resourceDomains: RESOURCE_DOMAINS },
       prefersBorder: false,
+      // Только ChatGPT: ему домен обязателен для публикации, а у Claude формат другой.
+      ...(host === "chatgpt" ? { domain: SITE } : {}),
     },
     "openai/widgetDescription": description,
     "openai/widgetDomain": SITE,
@@ -363,9 +365,9 @@ const HTML: Record<string, { name: string; description: string; html: string }> 
 };
 
 /** Регистрирует ресурсы карточек на сервере. */
-export function registerWidgets(server: McpServer): void {
+export function registerWidgets(server: McpServer, host: HostKind = "other"): void {
   for (const [uri, w] of Object.entries({ ...HTML, ...MONEY_HTML, ...TRAVEL_HTML })) {
-    const meta = resourceMeta(w.description);
+    const meta = resourceMeta(w.description, host);
     server.registerResource(
       w.name,
       uri,

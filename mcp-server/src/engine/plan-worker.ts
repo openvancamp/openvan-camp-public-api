@@ -18,7 +18,7 @@ type Dict = Record<string, unknown>;
 
 const { enginePath, payload, inputs, visa, texts, locale, currency } = workerData as {
   enginePath: string;
-  payload: Dict & { countries: Record<string, { name?: string; in?: string; from?: string }>; passports?: Array<{ value: string; label: string }>; rates?: Record<string, number> };
+  payload: Dict & { countries: Record<string, { name?: string; in?: string; from?: string }>; passports?: Array<{ value: string; label: string }>; passportChips?: Array<{ value: string; label: string }>; rates?: Record<string, number> };
   inputs: Dict;
   visa: Dict;
   texts: Record<string, unknown> & { days_forms?: Record<string, string> };
@@ -107,6 +107,10 @@ try {
     first_day: iso(vm.days?.[0]?.date),
     end_date: iso(vm.end),
     currency: rate ? currency : "EUR",
+    // Паспорта для выбора в карточке: те же чипы, что в шторке роудбука (по языку страницы),
+    // плюс уже указанные. Смена паспорта = пересчёт plan_road_trip с passports.
+    passports: ((inputs.travelers ?? []) as string[]).map((cc) => ({ value: cc, label: countryName(cc) })),
+    passport_chips: (payload.passportChips ?? []).slice(0, 8).map((c) => ({ value: c.value, label: c.label })),
     // Выбор валюты в карточке: EUR, USD и валюты стран на пути — только те, для которых есть курс.
     currency_options: [...new Set(["EUR", "USD", ...((vm.cards ?? []) as Array<{ cc: string }>).map((c) => (payload as { currencies?: Record<string, string> }).currencies?.[c.cc]).filter(Boolean)])]
       .filter((c) => c === "EUR" || payload.rates?.[c as string]),
