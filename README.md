@@ -8,7 +8,7 @@
 [![Data: CC BY 4.0](https://img.shields.io/badge/data-CC%20BY%204.0-467187)](https://creativecommons.org/licenses/by/4.0/)
 [![CI](https://github.com/openvancamp/openvan-camp-public-api/actions/workflows/ci.yml/badge.svg)](https://github.com/openvancamp/openvan-camp-public-api/actions/workflows/ci.yml)
 [![Published packages work](https://github.com/openvancamp/openvan-camp-public-api/actions/workflows/verify-distribution.yml/badge.svg)](https://github.com/openvancamp/openvan-camp-public-api/actions/workflows/verify-distribution.yml)
-[![OpenVan MCP server on Glama](https://glama.ai/mcp/servers/openvancamp/openvan-camp-public-api/badges/score.svg)](https://glama.ai/mcp/servers/openvancamp/openvan-camp-public-api)
+[![OpenVan.camp MCP server on Glama](https://glama.ai/mcp/servers/openvancamp/openvan-camp-public-api/badges/score.svg)](https://glama.ai/mcp/servers/openvancamp/openvan-camp-public-api)
 
 Free, no-auth API for vanlife data: fuel prices, route fuel cost, toll roads, holidays and peak traffic days, travel hazards, power plugs, customs rules, currency rates, food cost index, weather suitability scores, visa and vehicle-import rules, vanlife events, news stories, and license plates of the world — all in one place, no registration required.
 
@@ -26,9 +26,9 @@ Free, no-auth API for vanlife data: fuel prices, route fuel cost, toll roads, ho
 
 **MCP Server (for AI agents):** [`mcp-server/`](./mcp-server) — 29 read-only tools with interactive cards in Claude and ChatGPT (incl. `plan_road_trip` — a whole-trip roadbook), hosted at `https://mcp.openvan.camp/mcp`, or locally `npx -y @openvancamp/mcp-server` for Claude Desktop / Cursor / Windsurf. [Install docs →](./mcp-server/README.md) · [AI agents guide →](https://openvan.camp/ai?utm_source=github&utm_medium=referral&utm_campaign=public-api-repo)
 
-**Gemini CLI extension:** install this repository with `gemini extensions install https://github.com/openvancamp/openvan-camp-public-api`. The root [`gemini-extension.json`](./gemini-extension.json) connects Gemini CLI directly to the hosted OpenVan MCP server; no API key is required.
+**Gemini CLI extension:** install this repository with `gemini extensions install https://github.com/openvancamp/openvan-camp-public-api`. The root [`gemini-extension.json`](./gemini-extension.json) connects Gemini CLI directly to the hosted OpenVan.camp MCP server; no API key is required.
 
-**Custom GPT:** [OpenVan Travel Assistant](https://chatgpt.com/g/g-69e723ddf2f48191b828b461cd7f57e0-openvan-travel-assistant) — live in ChatGPT GPT Store.
+**In your AI assistant, no code:** [Claude connector](https://claude.ai/directory/connectors/openvan-travel) · [ChatGPT app](https://chatgpt.com/plugins/plugin_asdk_app_69e458a2ea748191a71a07f7f673234c) · Telegram bot [@OpenVanCampBot](https://t.me/OpenVanCampBot) — the same data as interactive cards in the chat. [How to connect →](https://openvan.camp/en/assistant?utm_source=github&utm_medium=referral&utm_campaign=public-api-repo)
 
 ---
 
@@ -597,8 +597,9 @@ npm: [`@openvancamp/sdk`](https://www.npmjs.com/package/@openvancamp/sdk) · [Fu
 - **JavaScript SDK:** https://www.npmjs.com/package/@openvancamp/sdk
 - **Python SDK:** [`python-sdk/`](./python-sdk) — `pip install openvan`
 - **Daily CSV snapshots with history:** [openvancamp/openvan-travel-data](https://github.com/openvancamp/openvan-travel-data)
+- **Claude, ChatGPT and Telegram:** [openvan.camp/en/assistant](https://openvan.camp/en/assistant?utm_source=github&utm_medium=referral&utm_campaign=public-api-repo)
 - **Developer page:** [openvan.camp/en/developers](https://openvan.camp/en/developers?utm_source=github&utm_medium=referral&utm_campaign=public-api-repo)
-- **For AI agents (MCP, Custom GPT, llms.txt):** [openvan.camp/ai](https://openvan.camp/ai?utm_source=github&utm_medium=referral&utm_campaign=public-api-repo)
+- **For AI agents (MCP, llms.txt):** [openvan.camp/ai](https://openvan.camp/ai?utm_source=github&utm_medium=referral&utm_campaign=public-api-repo)
 
 ### The same data on the site
 

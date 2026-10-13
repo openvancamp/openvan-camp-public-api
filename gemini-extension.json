@@ -5,7 +5,7 @@
   "mcpServers": {
     "openvan": {
       "httpUrl": "https://mcp.openvan.camp/mcp",
-      "description": "OpenVan read-only travel and vanlife data tools"
+      "description": "OpenVan.camp read-only travel and vanlife data tools"
     }
   }
 }

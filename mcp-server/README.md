@@ -7,7 +7,7 @@
 
 Exposes 29 read-only tools via the [Model Context Protocol](https://modelcontextprotocol.io) so you can ask your AI assistant about:
 
-- **Whole road trips** — `plan_road_trip` builds an [OpenVan roadbook](https://openvan.camp/en/roadbook): day-by-day plan with overnights, budget (fuel, tolls, vignettes, ferries), entry and vehicle rules for every country on the way, and a shareable roadbook page
+- **Whole road trips** — `plan_road_trip` builds an [OpenVan.camp roadbook](https://openvan.camp/en/roadbook): day-by-day plan with overnights, budget (fuel, tolls, vignettes, ferries), entry and vehicle rules for every country on the way, and a shareable roadbook page
 - **Fuel prices** across all API-supported countries, using the same price keys as `/api/fuel/prices`
 - **Toll roads** — per-km rates, vignettes, toll bridges and tunnels by country; toll estimate for a route
 - **Holidays and peak traffic** — public and school holidays (regional), official peak traffic days
@@ -29,6 +29,13 @@ Data is CC BY 4.0. Attribute *OpenVan.camp* when citing.
 ---
 
 ## Install
+
+### Claude and ChatGPT (no install)
+
+The server is listed in both directories — open the page and press **Connect**:
+
+- Claude: [OpenVan.camp in the Claude connector directory](https://claude.ai/directory/connectors/openvan-travel)
+- ChatGPT: [OpenVan.camp in the ChatGPT app directory](https://chatgpt.com/plugins/plugin_asdk_app_69e458a2ea748191a71a07f7f673234c)
 
 ### Remote (no-install, for web-based clients)
 
@@ -84,7 +91,7 @@ npx -y @openvancamp/mcp-server
 
 | Tool | Description |
 |---|---|
-| `plan_road_trip` | Whole trip between 2–10 places via the OpenVan roadbook: day-by-day overnights, budget, per-country entry and vehicle rules (Schengen 90/180), holidays, safety, power, checklist, link to the roadbook |
+| `plan_road_trip` | Whole trip between 2–10 places via the OpenVan.camp roadbook: day-by-day overnights, budget, per-country entry and vehicle rules (Schengen 90/180), holidays, safety, power, checklist, link to the roadbook |
 | `get_country_travel_brief` | One country at a glance: entry and allowed stay for your passport, weather, fuel, road rules, holidays for the next 30 days, safety, power plugs, customs, food prices |
 | `get_fuel_prices` | Current retail fuel prices per country |
 | `compare_fuel_prices` | Compare one fuel type across 2–10 countries |
@@ -193,5 +200,8 @@ MIT for this server. Data returned by the server is licensed CC BY 4.0 — pleas
 - Website: https://openvan.camp
 - AI agents landing: https://openvan.camp/ai
 - OpenAPI schema: https://openvan.camp/.well-known/openapi.json
-- Custom GPT: https://chatgpt.com/g/g-69e723ddf2f48191b828b461cd7f57e0-openvan-travel-assistant
+- Claude connector: https://claude.ai/directory/connectors/openvan-travel
+- ChatGPT app: https://chatgpt.com/plugins/plugin_asdk_app_69e458a2ea748191a71a07f7f673234c
+- Telegram bot: https://t.me/OpenVanCampBot
+- How to connect (for readers): https://openvan.camp/en/assistant
 - Contact: hello@openvan.camp
