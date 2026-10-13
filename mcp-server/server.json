@@ -7,6 +7,17 @@
     "url": "https://github.com/openvancamp/openvan-camp-public-api",
     "source": "github"
   },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@openvancamp/mcp-server",
+      "version": "0.9.3",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ],
   "remotes": [
     {
       "type": "streamable-http",

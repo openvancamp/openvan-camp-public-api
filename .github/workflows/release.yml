@@ -57,6 +57,9 @@ jobs:
           if [ "$dir" = mcp-server ] && [ "$(jq -r .version mcp-server/server.json)" != "$version" ]; then
             echo "mcp-server/server.json version differs from $version"; exit 1
           fi
+          if [ "$dir" = mcp-server ] && jq -e --arg v "$version" '[.packages[]? | select(.version != $v)] | length > 0' mcp-server/server.json > /dev/null; then
+            echo "mcp-server/server.json packages[].version differs from $version"; exit 1
+          fi
           published=$(npm view "$name@$version" version 2>/dev/null || true)
           echo "dir=$dir" >> "$GITHUB_OUTPUT"
           echo "name=$name" >> "$GITHUB_OUTPUT"
