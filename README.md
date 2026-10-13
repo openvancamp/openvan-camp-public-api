@@ -24,7 +24,7 @@ Free, no-auth API for vanlife data: fuel prices, route fuel cost, toll roads, ho
 
 **Daily CSV snapshots:** [`openvancamp/openvan-travel-data`](https://github.com/openvancamp/openvan-travel-data) — fuel prices, exchange rates, food cost index and weather scores as CSV/JSON, one commit a day, with history.
 
-**MCP Server (for AI agents):** [`mcp-server/`](./mcp-server) — 27 read-only tools with interactive cards in Claude and ChatGPT (incl. `plan_road_trip` — a whole-trip roadbook), hosted at `https://mcp.openvan.camp/mcp`, or locally `npx -y @openvancamp/mcp-server` for Claude Desktop / Cursor / Windsurf. [Install docs →](./mcp-server/README.md) · [AI agents guide →](https://openvan.camp/ai?utm_source=github&utm_medium=referral&utm_campaign=public-api-repo)
+**MCP Server (for AI agents):** [`mcp-server/`](./mcp-server) — 29 read-only tools with interactive cards in Claude and ChatGPT (incl. `plan_road_trip` — a whole-trip roadbook), hosted at `https://mcp.openvan.camp/mcp`, or locally `npx -y @openvancamp/mcp-server` for Claude Desktop / Cursor / Windsurf. [Install docs →](./mcp-server/README.md) · [AI agents guide →](https://openvan.camp/ai?utm_source=github&utm_medium=referral&utm_campaign=public-api-repo)
 
 **Gemini CLI extension:** install this repository with `gemini extensions install https://github.com/openvancamp/openvan-camp-public-api`. The root [`gemini-extension.json`](./gemini-extension.json) connects Gemini CLI directly to the hosted OpenVan MCP server; no API key is required.
 

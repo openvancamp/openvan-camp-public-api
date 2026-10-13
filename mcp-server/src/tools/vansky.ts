@@ -111,14 +111,14 @@ export async function getVanSkyWeather({ country_code, locale }: { country_code:
 
   if (!parsed.success) {
     return {
-      content: [{ type: "text" as const, text: `No VanSky data for country code "${country_code}".` }],
+      content: [{ type: "text" as const, text: `No travel weather data for country code "${country_code}".` }],
       isError: true,
     };
   }
 
   const d = parsed.data.data;
   const lines = [
-    `VanSky suitability for ${d.code.toUpperCase()} — ${d.score_label}`,
+    `OpenVan.camp travel weather for ${d.code.toUpperCase()} — ${d.score_label} (campervan travel score)`,
     `  Van score:   ${d.van_score}/100`,
     `  Sleep score: ${d.sleep_score}/100`,
     d.drive_score != null ? `  Drive score: ${d.drive_score}/100` : null,
@@ -194,10 +194,20 @@ export async function getVanSkyWeather({ country_code, locale }: { country_code:
 // ------------------------------------------------------------------
 
 export const listVanSkyTopInput = {
-  limit: z.number().int().min(1).max(20).default(10).describe("How many top-scoring countries to return."),
+  limit: z.preprocess((v) => (typeof v === "number" ? Math.min(Math.max(Math.round(v), 1), 20) : v), z.number().int().min(1).max(20)).default(10).describe("How many top-scoring countries to return."),
+  region: z
+    .enum(["world", "europe", "asia", "africa", "north_america", "south_america", "oceania"])
+    .default("world")
+    .describe("Only countries of this region — «best weather in Europe». Default: world."),
+  sort: z
+    .enum(["score", "warmest"])
+    .default("score")
+    .describe("score = best overall travel weather (default, also for «warm and pleasant»); warmest = highest daytime temperature today — only for a literal «where is it warmest/hottest»."),
 };
 
-export async function listVanSkyTop({ limit }: { limit: number }) {
+type Region = "world" | "europe" | "asia" | "africa" | "north_america" | "south_america" | "oceania";
+
+export async function listVanSkyTop({ limit, region = "world", sort = "score" }: { limit: number; region?: Region; sort?: "score" | "warmest" }) {
   const raw = await apiGet("/api/vansky/weather");
   const parsed = z
     .object({ data: z.array(VanSkyCountrySchema), count: z.number().optional() })
@@ -205,14 +215,18 @@ export async function listVanSkyTop({ limit }: { limit: number }) {
 
   if (!parsed.success) {
     return {
-      content: [{ type: "text" as const, text: "VanSky weather data unavailable." }],
+      content: [{ type: "text" as const, text: "Travel weather data unavailable." }],
       isError: true,
     };
   }
 
-  const sorted = [...parsed.data.data].sort((a, b) => b.van_score - a.van_score).slice(0, limit);
+  const sorted = parsed.data.data
+    .filter((d) => region === "world" || d.region === region)
+    .filter((d) => sort !== "warmest" || d.weather?.temp_day != null)
+    .sort((a, b) => (sort === "warmest" ? (b.weather?.temp_day ?? 0) - (a.weather?.temp_day ?? 0) : b.van_score - a.van_score))
+    .slice(0, limit);
   const rows = sorted
-    .map((d, i) => `  ${i + 1}. ${d.code.toUpperCase()}  score=${d.van_score}  ${d.score_label}  sleep=${d.sleep_score}  solar=${d.solar_kwh?.toFixed(1) ?? "—"}`)
+    .map((d, i) => `  ${i + 1}. ${d.code.toUpperCase()}: travel score ${d.van_score}/100 (${d.score_label}), daytime ${d.weather?.temp_day ?? "—"}°C, night ${d.weather?.temp_night ?? "—"}°C, sleep comfort ${d.sleep_score}/100`)
     .join("\n");
 
   const countries = await Promise.all(
@@ -235,10 +249,10 @@ export async function listVanSkyTop({ limit }: { limit: number }) {
     content: [
       {
         type: "text" as const,
-        text: `Top ${sorted.length} countries for vanlife today:\n\n${rows}`,
+        text: `Top ${sorted.length} countries ${sort === "warmest" ? "by daytime temperature" : "for vanlife weather"} today${region === "world" ? "" : ` in ${region}`}:\n\n${rows}`,
       },
     ],
-    structuredContent: { countries, url: `${SITE}/en/vansky`, units: { temperature: "°C" }, source: SOURCE },
+    structuredContent: { countries, region, sort, url: `${SITE}/en/vansky`, units: { temperature: "°C" }, source: SOURCE },
   };
 }
 
@@ -302,7 +316,7 @@ export async function getCityWeather({ city, country_code, locale }: { city: str
   const pick = cities.find((r) => !country_code || r.flag?.toUpperCase() === country_code.toUpperCase());
   if (!pick || !pick.flag) {
     return {
-      content: [{ type: "text" as const, text: `No VanSky data for a city called "${city}"${country_code ? ` in ${country_code.toUpperCase()}` : ""}. Use get_country_travel_weather for the country.` }],
+      content: [{ type: "text" as const, text: `No travel weather data for a city called "${city}"${country_code ? ` in ${country_code.toUpperCase()}` : ""}. Use get_country_travel_weather for the country.` }],
       isError: true,
     };
   }
@@ -323,7 +337,7 @@ export async function getCityWeather({ city, country_code, locale }: { city: str
   const others = cities.filter((r) => r !== pick).slice(0, 3).map((r) => `${r.name} (${r.sub ?? r.flag})`);
 
   const lines = [
-    `VanSky travel weather for ${d.city_name}, ${d.country_name ?? d.country_code} — ${labelOf(d.van_score)}`,
+    `OpenVan.camp travel weather for ${d.city_name}, ${d.country_name ?? d.country_code} — ${labelOf(d.van_score)}`,
     `  Today:       ${d.van_score}/100`,
     d.week_score != null ? `  Next 7 days: ${d.week_score}/100` : null,
     d.sleep_score != null ? `  Sleep score: ${d.sleep_score}/100` : null,

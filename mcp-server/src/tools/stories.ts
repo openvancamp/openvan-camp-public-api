@@ -43,7 +43,7 @@ export const searchStoriesInput = {
     .enum(["en", "ru", "de", "fr", "es", "pt", "tr"])
     .default("en")
     .describe("Language of the conversation with the user: headlines, summaries and the card come in it. Always pass it when the user writes in one of these languages."),
-  limit: z.number().int().min(1).max(20).default(10),
+  limit: z.preprocess((v) => (typeof v === "number" ? Math.min(Math.max(Math.round(v), 1), 20) : v), z.number().int().min(1).max(20)).default(10),
 };
 
 export async function searchStories(args: {

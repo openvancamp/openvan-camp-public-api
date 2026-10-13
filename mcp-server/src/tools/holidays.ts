@@ -23,7 +23,7 @@ export const getHolidaysInput = {
   kind: z
     .enum(["public", "school", "traffic"])
     .optional()
-    .describe("Only one kind: public holidays, school holidays (often regional), or traffic = official peak traffic days (France, Bison Futé). Omit for all."),
+    .describe("Only one kind: public holidays, school holidays (often regional), or traffic = official peak traffic days — France only (Bison Futé). For «when are the roads busy» elsewhere omit it: public and school holidays are the busy days. Omit for all."),
   locale: z.string().optional().describe("Language of names: en, ru, de, fr, es, pt, tr."),
 };
 
@@ -64,8 +64,16 @@ export async function getHolidays({
 }) {
   const cc = country_code.toUpperCase();
   let data: HolidaysResponse;
+  let noTrafficForecast = false;
   try {
     data = await apiGet<HolidaysResponse>(`/api/holidays/countries/${cc}`, { from, to, kind, locale });
+    // Прогноз пробок официально есть только у Франции. «Когда дороги забиты» в Турции с
+    // kind=traffic давал пусто и «праздников нет» при Дне Республики 29.10 (13.10.2026):
+    // нет прогноза — отдаём праздники, они и есть загруженные дни.
+    if (kind === "traffic" && data.items.length === 0) {
+      data = await apiGet<HolidaysResponse>(`/api/holidays/countries/${cc}`, { from, to, locale });
+      noTrafficForecast = true;
+    }
   } catch (e) {
     if (e instanceof OpenVanApiError && e.status === 404) {
       return text(`No holiday data for ${cc} — this means no data, not "no holidays". Do not tell the user the dates are free.`, true);
@@ -101,9 +109,12 @@ export async function getHolidays({
   return {
     ...text(
     `Holidays in ${data.name} (${data.country_code}) ${data.from} – ${data.to}: ${data.count} entries.\n` +
+      (noTrafficForecast ? "There is no official peak-traffic forecast for this country (only France has one); these holidays are the days when roads get busy:\n" : "") +
       (lines.length ? lines.join("\n") : "Nothing in this period for the requested kinds.") +
-      `\n\nTraffic colours (Bison Futé): green normal, orange heavy, red very heavy, black extremely heavy.` +
-      ` Sources: Nager.Date (public), OpenHolidays API (school), Bison Futé (traffic).${ATTRIBUTION_FOOTER}`
+      (data.items.some((i) => i.kind === "traffic")
+        ? `\n\nTraffic colours (Bison Futé): green normal, orange heavy, red very heavy, black extremely heavy.`
+        : "") +
+      `\n\nSources: Nager.Date (public), OpenHolidays API (school), Bison Futé (traffic).${ATTRIBUTION_FOOTER}`
     ),
     structuredContent: card,
   };

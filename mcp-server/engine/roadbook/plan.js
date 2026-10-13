@@ -20,6 +20,9 @@ import { sightVisitMin, topSights } from './rows/sights.js';
 import { climateTemps, forecastSky } from './rows/weather.js';
 import { winterRow } from './rows/winter.js';
 import { roadsRow, urbanRow, notesRow } from './rows/roads.js';
+import { rulesRow, requiredEquipment } from './rows/rules.js';
+import { licenceRow, licenceCheck } from './rows/licence.js';
+import { sosRow } from './rows/sos.js';
 import { fuelRow } from './rows/fuel.js';
 import { computeTrack, vehicleRuleToTrack, parseLocalDate, formatLocalDate, NO_COUNTER_MODES, WINDOW_UNLIMITED } from '../visa-calc-core.js';
 
@@ -30,6 +33,9 @@ export { winterRow } from './rows/winter.js';
 export { skyOf } from './rows/weather.js';
 export { sightVisitMin, topSights } from './rows/sights.js';
 export { roadsRow, urbanRow, notesRow } from './rows/roads.js';
+export { rulesRow } from './rows/rules.js';
+export { licenceRow, licenceCheck } from './rows/licence.js';
+export { sosRow } from './rows/sos.js';
 export { fuelRow } from './rows/fuel.js';
 
 /** Короче этого страна — транзит: карточка сворачивается в строку. */
@@ -759,8 +765,21 @@ export function buildPlan(payload, inputs, visa, env) {
     };
     // Часы пункта пропуска — из OSM и поправок config/roadbook.php. «Только по будням»
     // проверяется по дню перехода: Иркештам по плану приходился на субботу и воскресенье.
-    const hoursLabel = h => (h === '24/7' ? fmt.t('hours_247') : /^Mo-Fr$/.test(h || '') ? fmt.t('hours_weekdays') : h || null);
+    const hoursLabel = h => (h === '24/7' || /^круглосуточно\.?$/i.test(h || '') ? fmt.t('hours_247') : /^Mo-Fr$/.test(h || '') ? fmt.t('hours_weekdays') : h || null);
     const weekdaysOnly = h => /^Mo-Fr\b/.test(h || '');
+    // Двусторонний пункт (Росгранстрой): только для граждан двух стран перехода — остальных разворачивают.
+    const bilateralChecks = (b, from, to) => {
+        if (!b.info?.bilateral) {
+            return [];
+        }
+        const pair = b.info.countries || [from, to];
+        const names = pair.map(cc => fmt.countryName(cc)).join(' / ');
+        if (travelers.length && travelers.every(t => pair.includes(t))) {
+            return [{ id: 'bilateral', s: 'ok', t: fmt.t('check_border_bilateral_ok', { countries: names }) }];
+        }
+
+        return [{ id: 'bilateral', s: travelers.length ? 'bad' : 'warn', t: fmt.t(travelers.length ? 'check_border_bilateral_bad' : 'check_border_bilateral', { countries: names }) }];
+    };
     const hoursChecks = (b, date) => {
         if (!weekdaysOnly(b.opening_hours)) {
             return [];
@@ -784,7 +803,7 @@ export function buildPlan(payload, inputs, visa, env) {
             who: /^[A-Z]{2}$/.test(h.side) ? fmt.countryName(h.side) : null,
             group: HOURS_GROUPS[h.service] || 'other',
             svc: fmt.t(`hours_svc_${HOURS_GROUPS[h.service] || 'other'}`),
-            schedule: h.schedule, url: h.source_url, title: h.source_title,
+            schedule: hoursLabel(h.schedule), url: h.source_url, title: h.source_title,
             checked: fmt.t('hours_checked', { date: h.reviewed_on }),
             warn: h.conflicting ? fmt.t('hours_conflict') : h.stale ? fmt.t('hours_stale', { date: h.reviewed_on }) : null,
             side: h.side,
@@ -839,13 +858,13 @@ export function buildPlan(payload, inputs, visa, env) {
             ferry: ferry || b.ferry,
             ...(ferry ? ferryChecks(from, to, i, ferry) : {}),
             name: ferry?.name || b.name || null, hours: hoursLabel(b.opening_hours), hoursInfo: ferry ? null : hoursInfo(b, from, to),
-            checks: [...hoursChecks(b, start ? d.date : null), ...borderChecks(from, to, i)], dayLabel: start ? fmt.dateWd(d.date) : fmt.t('day_n', { n: d.d }),
+            checks: [...bilateralChecks(b, from, to), ...hoursChecks(b, start ? d.date : null), ...borderChecks(from, to, i)], dayLabel: start ? fmt.dateWd(d.date) : fmt.t('day_n', { n: d.d }),
             // Та же граница на обратной дороге — в другую сторону и со своими проверками.
             back: round ? {
                 code: `${to} → ${from}`, from: to, to: from,
                 name: backFerry?.name || b.name || null, ferry: backFerry || b.ferry,
                 ...(backFerry ? ferryChecks(to, from, i, backFerry, true) : {}),
-                checks: [...hoursChecks(b, start ? backDate(d) : null), ...borderChecks(to, from, i, true)],
+                checks: [...bilateralChecks(b, to, from), ...hoursChecks(b, start ? backDate(d) : null), ...borderChecks(to, from, i, true)],
                 dayLabel: start ? fmt.dateWd(backDate(d)) : fmt.t('day_n', { n: nDrive * 2 - d.d + 1 }),
             } : null,
         };
@@ -1064,9 +1083,27 @@ export function buildPlan(payload, inputs, visa, env) {
         }
 
         // Въезд в города (payload.urban, справочник urban-access.json): rows/roads.js.
-        const urban = urbanRow(payload.urban?.[r.cc], r, days, fmt);
+        const urban = urbanRow(payload.urban?.[r.cc], r, days, fmt, [0, ...waypointsNamed.map(w => w.km)], inputs.fuel || null);
         if (urban) {
             rows.push(urban);
+        }
+
+        // Правила дороги (payload.rules, справочник europe.json): скорости, промилле, экипировка — rows/rules.js.
+        const rules = rulesRow(payload.rules?.[r.cc], inputs, fmt);
+        if (rules) {
+            rows.push(rules);
+        }
+
+        // Права за рулём (payload.licence, справочник licence.json): какой образец МВУ признают — rows/licence.js.
+        const licence = travelers.includes(r.cc) ? null : licenceRow(payload.licence, r.cc, fmt);
+        if (licence) {
+            rows.push(licence);
+        }
+
+        // Экстренные службы (payload.emergency, справочник emergency.json) — rows/sos.js.
+        const sos = sosRow(payload.emergency, r.cc, fmt);
+        if (sos) {
+            rows.push(sos);
         }
 
         // Особенности дорог (payload.notes, справочник route-notes.json): rows/roads.js.
@@ -1407,10 +1444,15 @@ export function buildPlan(payload, inputs, visa, env) {
     const banned = cards.find(c => c.rows[1].banned);
     const restricted = cards.find(c => c.rows[0].restricted);
     const overCard = cards.find(c => c.pinch?.over);
+    // Двусторонний пункт пропуска, через который человека с этими паспортами не пустят (Росгранстрой).
+    const closedPost = borders.flatMap(b => [b, b.back].filter(Boolean).map(x => ({ b, c: (x.checks || []).find(k => k.id === 'bilateral' && k.s === 'bad') })))
+        .find(x => x.c);
     if (banned) {
         alert = { s: 'bad', key: 'ban', title: fmt.t('alert_ban_title', { plates: inputs.plates || '' }), text: banned.rows[1].lines[0], cc: banned.cc };
     } else if (restricted) {
         alert = { s: 'bad', key: 'restricted', title: fmt.t('alert_restricted_title', { country: restricted.name }), text: restricted.rows[0].lines[0], cc: restricted.cc };
+    } else if (closedPost) {
+        alert = { s: 'bad', key: 'bilateral', title: fmt.t('alert_bilateral_title', { name: closedPost.b.name || closedPost.b.code }), text: closedPost.c.t, cc: closedPost.b.to };
     } else if (schengen?.over && travelers.length) {
         alert = { s: 'bad', key: 'schengen', title: fmt.t('alert_schengen_title', { total: schengen.total }), text: fmt.t('alert_schengen_text', { extra: fmt.days(schengen.total - 90) }) };
     } else if (overCard) {
@@ -1476,6 +1518,11 @@ export function buildPlan(payload, inputs, visa, env) {
             { id: 'passport', t: fmt.t('check_doc_passport'), c: abroad },
             { id: 'licence', t: fmt.t('check_doc_licence'), c: abroad },
         );
+        // МВУ: какой образец признают страны маршрута — предупреждение, если одним не обойтись.
+        const idp = licenceCheck(payload.licence, abroad, fmt);
+        if (idp) {
+            docs.push(idp);
+        }
     }
     if (carAbroad.length) {
         docs.push(
@@ -1553,9 +1600,34 @@ export function buildPlan(payload, inputs, visa, env) {
             ahead.push({ id: `ferry-tip-${i}`, s: 'toll', c: [b.from, b.to], t: b.ferry.tip });
         }
     });
-    // Экозоны Германии у маршрута — наклейку покупают заранее, на границе её не продают.
-    cards.filter(c => c.rows.find(x => x.key === 'urban' && x.kind === 'sticker' && x.near.length)).forEach((c) => {
+    // Экозоны Германии, куда маршрут заезжает, — наклейку покупают заранее, на границе её не продают.
+    cards.filter(c => c.rows.find(x => x.key === 'urban' && x.kind === 'sticker' && x.enter.length)).forEach((c) => {
         ahead.push({ id: `umwelt-${c.cc}`, s: 'warn', c: [c.cc], t: fmt.t('check_umwelt', { country: c.name }) });
+    });
+    // Франция: Crit'Air заказывают только онлайн, почтой ~10 рабочих дней. Заезжаем в ZFE — обязательно,
+    // иначе — совет: в дни смога наклейку могут потребовать в любом городе.
+    cards.filter(c => c.rows.find(x => x.key === 'urban' && x.kind === 'critair')).forEach((c) => {
+        const row = c.rows.find(x => x.key === 'urban');
+        ahead.push({ id: `critair-${c.cc}`, s: row.enter.length ? 'warn' : 'ok', c: [c.cc], t: fmt.t('check_critair', { country: c.name }), url: 'https://www.certificat-air.gouv.fr/' });
+    });
+    // Обязательная экипировка: по предмету — страны маршрута, где без него штраф (справочник europe.json).
+    const kit = {};
+    uniq(cards.map(c => c.cc)).forEach((cc) => {
+        requiredEquipment(payload.rules?.[cc]).forEach((k) => {
+            (kit[k] ||= []).push(fmt.countryName(cc));
+        });
+    });
+    if (Object.keys(kit).length) {
+        ahead.push({ id: 'equipment', s: 'warn', c: [], t: fmt.t('check_equipment', {
+            items: Object.entries(kit).map(([k, names]) => `${fmt.t(`equip_${k}`)} (${names.join(', ')})`).join('; '),
+        }) });
+    }
+    // Экозоны NL, DK, BE, ES: регистрация или требование к дизелю — текст пункта из справочника.
+    cards.forEach((c) => {
+        const row = c.rows.find(x => x.key === 'urban' && x.kind === 'zone' && x.check);
+        if (row) {
+            ahead.push({ id: `zone-${c.cc}`, s: 'warn', c: [c.cc], t: row.check, url: row.source || undefined });
+        }
     });
     groups.push({ id: 'ahead', icon: 'shopping-cart', items: ahead });
 
@@ -1619,6 +1691,9 @@ export function buildPlan(payload, inputs, visa, env) {
     cards.forEach(c => c.rows.find(r => r.key === 'news').news.filter(n => n.severity === 'bad').slice(0, 1)
         .forEach(n => attention.push({ id: `n-${c.cc}`, s: n.severity, tag: 'news', c: [c.cc], t: n.title, url: n.url })));
     attention.push(...altitude);
+    if (closedPost) {
+        attention.push({ id: 'bilateral', s: 'bad', c: [closedPost.b.to], t: `${closedPost.b.name || closedPost.b.code}: ${closedPost.c.t}` });
+    }
     // Ночёвка в городе с ZTL: к отелю или стоянке в центре — только в часы, когда зона открыта.
     cards.forEach(c => (c.rows.find(x => x.key === 'urban' && x.kind === 'ztl')?.items || []).filter(z => z.night).forEach(z => attention.push({
         id: `ztl-${c.cc}-${z.name}`, s: 'warn', c: [c.cc], t: fmt.t('check_ztl_night', { city: z.name, hours: z.hours || '' }),

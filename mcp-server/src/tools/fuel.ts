@@ -435,18 +435,25 @@ export const findCheapestFuelInput = {
     .min(1)
     .max(20)
     .default(5)
-    .describe("How many cheapest countries to return."),
+    .describe("How many countries to return."),
+  order: z
+    .enum(["cheapest", "most_expensive"])
+    .default("cheapest")
+    .describe("cheapest first (default) or most_expensive first — «where is fuel the most expensive»."),
 };
 
 export async function findCheapestFuel({
   region,
   fuel_type,
   limit,
+  order = "cheapest",
 }: {
   region: "europe" | "asia" | "africa" | "north_america" | "south_america" | "oceania" | "world";
   fuel_type: FuelType;
   limit: number;
+  order?: "cheapest" | "most_expensive";
 }) {
+  const priciest = order === "most_expensive";
   const { fuel, rates, ratesUpdatedAt } = await fetchFuelAndRates();
 
   const rows = Object.values(fuel.data)
@@ -465,7 +472,7 @@ export async function findCheapestFuel({
       };
     })
     .filter((r) => r.priceLocal != null && !isNaN(r.priceEurPerLiter))
-    .sort((a, b) => a.priceEurPerLiter - b.priceEurPerLiter)
+    .sort((a, b) => (priciest ? b.priceEurPerLiter - a.priceEurPerLiter : a.priceEurPerLiter - b.priceEurPerLiter))
     .slice(0, limit);
 
   if (rows.length === 0) {
@@ -497,12 +504,12 @@ export async function findCheapestFuel({
     content: [
       {
         type: "text" as const,
-        text: `Cheapest ${fuel_type} in ${region}:\n\n${table}${footer}`,
+        text: `${priciest ? "Most expensive" : "Cheapest"} ${fuel_type} in ${region}:\n\n${table}${footer}`,
       },
     ],
     structuredContent: {
       mode: "ranking",
-      kind: "cheapest",
+      kind: priciest ? "priciest" : "cheapest",
       fuel_type,
       region,
       rows: rows.map(rankingRow),

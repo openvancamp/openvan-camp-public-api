@@ -1,5 +1,38 @@
 # Changelog
 
+## 2026-10-13
+
+### Added — MCP server v0.9.3
+- `get_country_travel_brief` — one call and one card for a country: entry rules and allowed stay for your passport,
+  weather, fuel, road rules, public holidays for the next 30 days, safety, power plugs, customs, food prices and the
+  country's licence-plate code (7 languages).
+- `list_best_weather_countries` takes `region` and `sort` ("where is it warmer"); `rank_food_prices` ranks countries by
+  food prices.
+- `plan_road_trip` accepts `kids` and `pets`: documents for children and animals reach the checklist. The trip answer and
+  card add road rules for your vehicle, winter rules, international driving permit model (UN 1949/1968 conventions),
+  emergency numbers, city entry rules (German Umweltplakette, French Crit'Air and low-emission zones) and Russian border
+  crossings with opening hours and passport checks.
+
+### Fixed — MCP server v0.9.3
+- Country names are normalised to ISO codes on input for every client (`Armenia`, `Турция`, `Deutschland`,
+  comma-separated lists); obsolete codes (DD, SU) are not accepted.
+- `null` for an optional argument means "not set" (OpenAI strict mode and Python wrappers send `locale: null`).
+- A `limit` above the maximum is clamped instead of rejected.
+- Clients that do not send `Accept: text/event-stream` no longer get HTTP 406.
+- Holidays: countries without traffic-specific data return public holidays as traffic days instead of "no holidays".
+- Tool descriptions no longer use internal product names.
+
+### Added — MCP server v0.9.2
+- `find_cheapest_fuel` takes `order=most_expensive` (with its own card in 7 languages).
+- Tool descriptions say when to call each tool in plain words — the same for Claude, ChatGPT and the Telegram bot.
+
+### Fixed — MCP server v0.9.2
+- `get_active_fires`: bounding box is longitude-first, as documented.
+
+### Fixed — MCP server v0.9.1
+- The service is called "OpenVan.camp" everywhere (card buttons in 7 languages, tool answers, connector title).
+- New card URI version, so hosts load the updated card texts.
+
 ## 2026-10-11
 
 ### Added — MCP server v0.9.0

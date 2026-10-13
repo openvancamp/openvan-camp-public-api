@@ -117,9 +117,10 @@ export function roadsRow(ctx) {
 }
 
 /**
- * Въезд в города у маршрута: экозоны Германии (зелёная наклейка) и ZTL Италии (центры под камерами).
+ * Въезд в города у маршрута: экозоны Германии (зелёная наклейка), ZTL Италии (центры под камерами)
+ * и ZFE Франции (наклейка Crit'Air, запреты по классам у каждой зоны свои).
  */
-export function urbanRow(urban, r, days, fmt) {
+export function urbanRow(urban, r, days, fmt, stops = [], fuel = null) {
     if (!urban) {
         return null;
     }
@@ -129,28 +130,70 @@ export function urbanRow(urban, r, days, fmt) {
         const nightAt = z => days.find(x => x.cc === r.cc && Math.abs(x.to - z.km) <= URBAN_NIGHT_KM);
         const names = near.map(z => z.name).join(', ');
         const nights = near.map(z => ({ z, night: nightAt(z) })).filter(x => x.night);
-        const lines = urban.kind === 'sticker'
-            ? [
-                fmt.t('urban_sticker_text', { fine: urban.fine_eur }),
-                near.length ? fmt.t('urban_sticker_near', { cities: names }) : fmt.t('urban_sticker_none'),
+        // Наклейка нужна, только если машина въезжает в город зоны: старт, точка маршрута, ночёвка или финиш.
+        // Транзит по автобану мимо — без наклейки: автобаны, как правило, в зону не входят. Близость центра
+        // к линии не годится: A4 идёт в километре от центра Эшвайлера, а в зону не заходит. Исключение —
+        // зоны, где транзитная трасса через центр сама в зоне (through_km: Лион M6/M7, Периферик Парижа).
+        const through = near.filter(z => (stops.some(km => Math.abs(km - z.km) <= URBAN_NIGHT_KM) || (z.through_km && z.off_km <= z.through_km))
+            && !nights.some(x => x.z === z));
+        const enter = [...nights.map(x => x.z), ...through].sort((a, b) => a.km - b.km);
+        const enterNames = enter.map(z => z.name).join(', ');
+        const kind = urban.kind;
+        let lines;
+        if (kind === 'sticker') {
+            lines = [
                 ...nights.map(x => fmt.t('urban_sticker_night', { city: x.z.name })),
-            ]
-            : [
+                ...through.map(z => fmt.t('urban_sticker_through', { city: z.name })),
+                ...(near.length && !enter.length ? [fmt.t('urban_sticker_pass', { cities: names })] : []),
+                fmt.t('urban_sticker_text', { fine: urban.fine_eur }),
+                ...(enter.length ? [fmt.t('urban_sticker_near', { cities: names })] : near.length ? [] : [fmt.t('urban_sticker_none')]),
+            ];
+        } else if (kind === 'critair') {
+            // Франция: наклейка нужна в любой ZFE и в дни смога в любом городе — поэтому строка есть всегда.
+            lines = [
+                enter.length ? fmt.t('urban_critair_enter', { cities: enterNames })
+                    : near.length ? fmt.t('urban_critair_pass', { cities: names }) : fmt.t('urban_critair_none'),
+                fmt.t('urban_critair_text', { fine: urban.fine_eur, fine_heavy: urban.fine_heavy_eur }),
+                fmt.t('urban_critair_peak'),
+            ];
+        } else if (kind === 'zone') {
+            // NL, DK, BE, ES: правило страны и зон — из справочника; запрет только для дизеля → бензину ничего не нужно.
+            lines = [
+                enter.length ? fmt.t('urban_zone_enter', { cities: enterNames })
+                    : near.length ? fmt.t('urban_zone_pass', { cities: names }) : fmt.t('urban_zone_none'),
+                ...(urban.diesel_only && fuel && fuel !== 'diesel' ? [fmt.t('urban_zone_not_diesel')] : []),
+                ...(urban.rule ? [urban.rule] : []),
+            ];
+        } else {
+            lines = [
                 fmt.t('urban_ztl_text'),
                 ...(near.length ? [] : [fmt.t('urban_ztl_none')]),
             ];
+        }
+        const big = kind === 'sticker' ? (enter.length || !near.length ? 'urban_sticker_big' : 'urban_sticker_big_pass')
+            : kind === 'critair' ? (enter.length ? 'urban_critair_big' : 'urban_critair_big_pass')
+                : kind === 'zone' ? null : 'urban_ztl_big';
+        // Дизельный запрет бензину не мешает: въезд есть, но предупреждать не о чем.
+        const affected = !(kind === 'zone' && urban.diesel_only && fuel && fuel !== 'diesel');
+        const warn = kind === 'ztl' ? near.length > 0 : enter.length > 0 && affected;
         return {
-            key: 'urban', kind: urban.kind,
-            s: near.length ? 'warn' : 'ok',
-            big: fmt.t(urban.kind === 'sticker' ? 'urban_sticker_big' : 'urban_ztl_big'),
+            key: 'urban', kind,
+            s: warn ? 'warn' : 'ok',
+            big: big ? fmt.t(big) : (urban.big || null),
+            // Пункт чек-листа страны (тип zone): «:cities» — города, куда маршрут заезжает.
+            check: kind === 'zone' && warn && urban.check ? urban.check.split(':cities').join(enterNames) : null,
             lines,
-            // ZTL — по городам: часы, сайт мэрии и дата сверки.
-            items: urban.kind === 'ztl' ? near.map(z => ({
+            // ZTL и ZFE — по городам: часы и запреты, сайт мэрии или метрополии и дата сверки.
+            items: kind !== 'sticker' ? near.map(z => ({
                 name: z.name, hours: z.hours, url: z.url, paid: z.paid, night: !!nightAt(z),
                 checked: z.checked_at ? fmt.date(parseLocalDate(z.checked_at)) : null,
             })) : [],
+            srcKey: kind === 'critair' ? 'urban_zfe_source' : kind === 'zone' ? 'urban_zone_item_source' : 'urban_ztl_source',
             source: urban.source_url || null,
-            near, nights: nights.map(x => x.z.name),
+            sourceLabel: urban.source_url
+                ? fmt.t(kind === 'sticker' ? 'urban_sticker_source' : kind === 'critair' ? 'urban_critair_source' : kind === 'zone' ? 'urban_zone_source' : 'urban_ztl_source_nodate')
+                : null,
+            near, enter: enter.map(z => z.name), nights: nights.map(x => x.z.name),
         };
     }
 }
@@ -164,7 +207,10 @@ export function notesRow(ctx) {
     const firstVisit = ranges.findIndex(x => x.cc === r.cc) === i;
     const foreignPlate = !(carHome || (inputs.plates && inputs.plates === r.cc));
     const notes = (payload.notes?.[r.cc] || []).filter(n => (n.km === null ? firstVisit : n.km >= r.from_km - 1 && n.km <= r.to_km + 1)
-        && (!n.foreign_plate || foreignPlate) && (n.kind !== 'fee' || n.fee?.type !== 'stay_bands_foreign_plate' || foreignPlate));
+        && (!n.foreign_plate || foreignPlate) && (n.kind !== 'fee' || n.fee?.type !== 'stay_bands_foreign_plate' || foreignPlate)
+        // Номера-исключения (BelToll не берёт с ЕАЭС) и масса: правило для машин до/свыше 3,5 т.
+        && !(n.plates_exempt && inputs.plates && n.plates_exempt.includes(inputs.plates))
+        && !(n.weight && n.weight !== ((inputs.weight === 'gt35' || inputs.vehicle_class === 'heavy') ? 'gt35' : 'le35')));
     if (!notes.length) {
         return null;
     }

@@ -16,25 +16,27 @@ type Dict = Record<string, unknown>;
 // Движок рассчитан на браузер: пара мест читает window.VanlifeUnits / пишет window.FuelCalc.
 (globalThis as Dict).window ??= {};
 
-const { enginePath, payload, inputs, visa, texts, locale, currency } = workerData as {
+const { enginePath, payload, inputs, visa, texts, units, locale, currency } = workerData as {
   enginePath: string;
   payload: Dict & { countries: Record<string, { name?: string; in?: string; from?: string }>; passports?: Array<{ value: string; label: string }>; passportChips?: Array<{ value: string; label: string }>; rates?: Record<string, number> };
   inputs: Dict;
   visa: Dict;
   texts: Record<string, unknown> & { days_forms?: Record<string, string> };
+  units?: Record<string, string>;
   locale: string;
   currency: string;
 };
 
-/** Копия distParam() из page.js: числа в шаблонах получают подпись единицы. */
+/** Копия distParam() из page.js: числа в шаблонах получают подпись единицы на языке роудбука. */
+const unit = (u: string, fallback: string) => units?.[u] || fallback;
 function distParam(name: string, value: unknown): unknown {
   if (typeof value !== "number") return value;
-  if (name === "m") return `${Math.round(value)} m`;
-  if (name === "cons") return `${value} l/100 km`;
-  if (name === "speed") return `${Math.round(value)} km/h`;
-  if (name === "liters") return `${Math.round(value)} l`;
+  if (name === "m") return `${Math.round(value)} ${unit("m", "m")}`;
+  if (name === "cons") return `${value} ${unit("l100km", "l/100 km")}`;
+  if (name === "speed") return `${Math.round(value)} ${unit("kmh", "km/h")}`;
+  if (name === "liters") return `${Math.round(value)} ${unit("l", "l")}`;
   if (name !== "km" && name !== "off") return value;
-  return `${Math.round(value)} km`;
+  return `${Math.round(value)} ${unit("km", "km")}`;
 }
 
 function t(key: string, params: Record<string, unknown> = {}): string {
@@ -85,6 +87,15 @@ const iso = (d: unknown): string | null => {
 };
 const round = (n: unknown, k = 0): number | null => (typeof n === "number" && Number.isFinite(n) ? Math.round(n * 10 ** k) / 10 ** k : null);
 
+const ROW_KEYS = ["visa", "car", "roads", "urban", "rules", "licence", "sos", "winter", "notes", "holidays", "hazards", "power", "customs"];
+const LONG_ROWS = ["urban", "rules", "winter"];
+
+/** Текст пункта строки: правила зоны или описание участка дороги с габаритами и ценой. */
+function itemText(x: Dict): string {
+  if (typeof x.hours === "string") return x.hours;
+  return [...((x.lines as string[] | undefined) ?? []), x.limits, x.price].filter((v) => typeof v === "string" && v).join(" ");
+}
+
 try {
   const { buildPlan } = await import(enginePath);
   const vm = buildPlan(payload, inputs, visa, { today: new Date(), journal: null, fmt: makeFmt(), moneyCurrency: currency });
@@ -93,7 +104,7 @@ try {
   // на языке разговора, теми же словами, что в роудбуке.
   const rate = currency === "EUR" ? 1 : payload.rates?.[currency] || 1;
   const toCur = (eur: unknown) => (typeof eur === "number" ? Math.round(eur * rate) : null);
-  type Row = { key: string; s: string; big?: string; lines?: string[] };
+  type Row = { key: string; s: string; big?: string; lines?: string[]; items?: Array<Dict & { name: string; hours?: string; url?: string; src?: { url?: string } }> };
   type Card = { cc: string; name: string; km: number; hours: number; transit?: boolean; rows: Row[] };
 
   const summary = {
@@ -137,13 +148,39 @@ try {
         transit: Boolean(c.transit),
         cost: b ? toCur(b.total) : null,
         rows: (c.rows ?? [])
-          .filter((r) => ["visa", "car", "roads", "holidays", "hazards", "power", "customs"].includes(r.key) && r.s !== "none")
-          .map((r) => ({ key: r.key, s: r.s, big: r.big ?? null, lines: (r.lines ?? []).slice(0, 2) })),
+          // Строки роудбука, которые доходят до MCP. Новая строка в plan.js сюда сама не попадёт —
+          // добавь ключ (так «Въезд в города», «Зима», «Особенности дорог» и «Правила» долго не доходили).
+          .filter((r) => ROW_KEYS.includes(r.key) && r.s !== "none")
+          .map((r) => ({
+            key: r.key, s: r.s, big: r.big ?? null, lines: (r.lines ?? []).slice(0, LONG_ROWS.includes(r.key) ? 4 : 2),
+            // Пункты строки: зоны въезда в города (что запрещено и когда), особенности дорог (перевалы, габариты, сборы).
+            ...(r.items?.length && (r.key === "urban" || r.key === "notes")
+              ? { items: r.items.map((x) => ({ name: x.name, text: itemText(x), url: x.url ?? x.src?.url ?? null })) }
+              : {}),
+          })),
       };
     }),
     nights: ((vm.days ?? []) as Array<{ d: number; city?: string; cc?: string; km?: number; date?: unknown; last?: boolean }>)
       .filter((d) => !d.last)
       .map((d) => ({ day: d.d, city: d.city ?? null, cc: d.cc ?? null, km: round(d.km), date: iso(d.date) })),
+    // Границы по ходу: пункт, день, часы (по службам и сторонам, с источником) и проверки — двусторонний
+    // пункт, «только по будням», что везти. Внутренние шенгенские без данных — пропускаем.
+    borders: ((vm.borders ?? []) as Array<Dict & { code: string; name?: string | null; dayLabel?: string; hours?: string | null; ferry?: unknown;
+      hoursInfo?: { unknown?: boolean; rows?: Array<{ who?: string | null; svc?: string; schedule?: string }>; notes?: string[] } | null;
+      checks?: Array<{ id?: string; s: string; t: string }> }>)
+      .map((b) => ({
+        code: b.code,
+        name: b.name ?? null,
+        day: b.dayLabel ?? null,
+        ferry: Boolean(b.ferry),
+        // Часы по службам из слоя border_info точнее строки OSM — она только когда их нет.
+        hours: (b.hoursInfo?.rows ?? []).length
+          ? (b.hoursInfo?.rows ?? []).map((r) => [r.who, r.svc].filter(Boolean).join(", ") + ": " + (r.schedule ?? ""))
+          : b.hours ? [b.hours] : [],
+        hours_unknown: Boolean(b.hoursInfo?.unknown),
+        checks: (b.checks ?? []).filter((c) => c.s !== "ok" || c.id === "bilateral").map((c) => ({ s: c.s, t: c.t })),
+      }))
+      .filter((b) => b.name || b.hours.length || b.checks.length || b.hours_unknown),
     schengen: vm.schengen ? { used: vm.schengen.used, left: vm.schengen.left, over: Boolean(vm.schengen.over) } : null,
     terms: ((vm.terms ?? []) as Array<Dict>).map((x) => ({ names: x.names, you: x.youText, car: x.carText, you_bad: Boolean(x.youBad), car_bad: Boolean(x.carBad) })),
     checklist: ((vm.groups ?? []) as Array<{ id: string; items: Array<{ t: string; s: string }> }>).map((g) => ({

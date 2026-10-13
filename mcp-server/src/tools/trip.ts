@@ -36,6 +36,12 @@ export const planRoadTripInput = {
     .string()
     .optional()
     .describe("Passports of the travellers, comma separated ISO alpha-2 codes, e.g. RU or DE,RU. Enables visa terms and the Schengen counter."),
+  residence: z
+    .string()
+    .optional()
+    .describe("Residence permit of the travellers, ISO alpha-2, in the same order as passports (one code applies to all), e.g. DE. A Schengen residence permit removes the visa and the 90/180 counter in Schengen."),
+  kids: z.number().int().min(0).max(9).optional().describe("Number of children travelling (adds the documents children need abroad to the checklist)."),
+  pets: z.number().int().min(0).max(9).optional().describe("Number of pets travelling (adds pet passport, microchip, rabies and EU titre-test steps to the checklist)."),
   plates: z.string().length(2).optional().describe("Country of the vehicle's plates, ISO alpha-2 (entry bans and green card depend on it)."),
   weight: z.enum(["le35", "gt35"]).optional().describe("Vehicle weight: le35 (up to 3.5 t) or gt35."),
   vehicle_class: z
@@ -56,6 +62,9 @@ export const planRoadTripInput = {
 type Args = {
   waypoints: string[];
   passports?: string;
+  residence?: string;
+  kids?: number;
+  pets?: number;
   plates?: string;
   weight?: "le35" | "gt35";
   vehicle_class: "car" | "van" | "heavy";
@@ -91,6 +100,7 @@ type RoadbookTextsResponse = {
   typical_fuel?: string;
   build_steps?: Record<string, string>;
   building_title?: string;
+  units?: Record<string, string>;
 };
 const textsCache = new Map<string, { at: number; data: RoadbookTextsResponse }>();
 
@@ -135,9 +145,10 @@ type Summary = {
   currency: string;
   totals: { fuel: number | null; tolls: number | null; vignettes: number | null; ferries: number | null; total: number | null; fuel_unknown: boolean; roads_unknown: string[] } | null;
   alert: { s: string; title: string; text: string } | null;
-  countries: Array<{ cc: string; name: string; km: number | null; cost: number | null; rows: Array<{ key: string; s: string; big: string | null; lines: string[] }> }>;
+  countries: Array<{ cc: string; name: string; km: number | null; cost: number | null; rows: Array<{ key: string; s: string; big: string | null; lines: string[]; items?: Array<{ name: string; text: string; url: string | null }> }> }>;
   nights: Array<{ day: number; city: string | null; cc: string | null; km: number | null; date: string | null }>;
   schengen: { used: number; left: number; over: boolean } | null;
+  borders?: Array<{ code: string; name: string | null; day: string | null; ferry: boolean; hours: string[]; hours_unknown: boolean; checks: Array<{ s: string; t: string }> }>;
   terms: Array<{ names: string[]; you: string; car: string; you_bad: boolean; car_bad: boolean }>;
   checklist: Array<{ id: string; items: Array<{ t: string; s: string }> }>;
   weather_window: { date: string | null; t: number | null } | null;
@@ -154,11 +165,17 @@ function tripInputs(args: Args, rb: RoadbookTextsResponse, currency: string) {
     .split(",")
     .map((s) => s.trim().toUpperCase())
     .filter((s) => /^[A-Z]{2}$/.test(s));
+  // ВНЖ — по порядку паспортов; один код — у всех в машине (RoadbookInputs обрежет по числу паспортов).
+  const res = (args.residence ?? "").split(",").map((s) => s.trim().toUpperCase()).filter((s) => /^[A-Z]{2}$/.test(s));
+  const residences = res.length === 1 ? travelers.map(() => res[0]) : res;
   const assumed = { cons: args.consumption == null, fuel: args.fuel == null };
   const fuel = args.fuel ?? rb.typical_fuel ?? "diesel";
   const consumption = args.consumption ?? rb.typical_cons ?? 10;
   const inputs: Record<string, unknown> = {
     travelers,
+    residences,
+    kids: args.kids,
+    pets: args.pets,
     plates: args.plates?.toUpperCase(),
     weight: args.weight ?? (args.vehicle_class === "heavy" ? "gt35" : undefined),
     vehicle_class: args.vehicle_class ?? "van",
@@ -288,7 +305,7 @@ export async function planRoadTrip(args: Args) {
   }
 
   // 4. План — движком роудбука.
-  const result = await runPlan({ enginePath: enginePath(), payload, inputs: norm, visa, texts, locale, currency });
+  const result = await runPlan({ enginePath: enginePath(), payload, inputs: norm, visa, texts, units: rb.units ?? {}, locale, currency });
   if (!result.ok || !result.summary) {
     return { content: [{ type: "text" as const, text: `The roadbook is ready, but the plan could not be computed here (${result.error}). Open it: ${roadbookUrl}` }] };
   }
@@ -308,11 +325,21 @@ export async function planRoadTrip(args: Args) {
   lines.push("", "Countries:");
   for (const c of s.countries) {
     lines.push(`- ${c.name} (${c.cc}): ${c.km} km${c.cost != null ? `, ≈ ${money(c.cost)}` : ""}`);
-    for (const r of c.rows) lines.push(`    ${r.key}: ${r.big ?? ""}${r.lines.length ? ` — ${r.lines.join(" ")}` : ""}`);
+    for (const r of c.rows) {
+      lines.push(`    ${r.key}: ${r.big ?? ""}${r.lines.length ? ` — ${r.lines.join(" ")}` : ""}`);
+      for (const x of r.items ?? []) lines.push(`      ${x.name}: ${x.text}${x.url ? ` (${x.url})` : ""}`);
+    }
   }
   if (s.terms.length) {
     lines.push("", "Time limits:");
     for (const x of s.terms) lines.push(`- ${x.names.join(", ")}: you — ${x.you}; vehicle — ${x.car}`);
+  }
+  if (s.borders?.length) {
+    lines.push("", "Border crossings:");
+    for (const b of s.borders) {
+      lines.push(`- ${b.code}${b.name ? ` ${b.name}` : ""}${b.day ? ` (${b.day})` : ""}: ${b.hours.length ? b.hours.join("; ") : b.hours_unknown ? "opening hours unknown" : ""}`);
+      for (const c of b.checks) lines.push(`    ${c.s}: ${c.t}`);
+    }
   }
   if (s.schengen) lines.push(`Schengen: ${s.schengen.used} of 90 days used by this trip, ${s.schengen.left} left${s.schengen.over ? " — OVER THE LIMIT" : ""}.`);
   if (s.nights.length) lines.push("", `Overnights: ${s.nights.map((n) => `day ${n.day} ${n.city ?? "?"} (${n.km} km)`).join("; ")}.`);

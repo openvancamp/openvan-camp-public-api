@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * OpenVan MCP Server — stdio entry point.
+ * OpenVan.camp MCP Server — stdio entry point.
  *
  * Used by Claude Desktop / Cursor / Windsurf / Continue when configured as
  *   { "command": "npx", "args": ["-y", "@openvancamp/mcp-server"] }

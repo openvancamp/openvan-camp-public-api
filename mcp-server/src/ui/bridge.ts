@@ -167,7 +167,7 @@ export const BRIDGE_JS = `
   // ниже — текст ответа как есть. rendered=true — карточки, которые ждут результат, перестают ждать.
   function fallback(r){
     rendered=true;
-    var txt=(r.content||[]).filter(function(c){return c.type==="text"}).map(function(c){return c.text}).join("\\n").replace(/_Data: OpenVan[^\\n]*/g,"").trim();
+    var txt=(r.content||[]).filter(function(c){return c.type==="text"}).map(function(c){return c.text}).join("\\n").replace(/_Data: OpenVan.camp[^\\n]*/g,"").trim();
     var el=document.getElementById("app");
     if(!el)return;
     el.innerHTML='<div class="card"><div class="hero"><h1 class="h1"></h1></div><div class="body"><div class="muted" style="white-space:pre-wrap"></div></div></div>';
@@ -266,8 +266,8 @@ export const BRIDGE_JS = `
   }
   request("ui/initialize",{
     protocolVersion:"2026-01-26",
-    appInfo:{name:"OpenVan",version:"1"},
-    clientInfo:{name:"OpenVan",version:"1"},
+    appInfo:{name:"OpenVan.camp",version:"1"},
+    clientInfo:{name:"OpenVan.camp",version:"1"},
     appCapabilities:{availableDisplayModes:["inline","fullscreen"]},
     capabilities:{}
   }).then(function(r){

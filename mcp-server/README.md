@@ -5,7 +5,7 @@
 
 **Official MCP server for [OpenVan.camp](https://openvan.camp)** — free, no-auth, machine-readable vanlife and RV travel data for AI agents.
 
-Exposes 27 read-only tools via the [Model Context Protocol](https://modelcontextprotocol.io) so you can ask your AI assistant about:
+Exposes 29 read-only tools via the [Model Context Protocol](https://modelcontextprotocol.io) so you can ask your AI assistant about:
 
 - **Whole road trips** — `plan_road_trip` builds an [OpenVan roadbook](https://openvan.camp/en/roadbook): day-by-day plan with overnights, budget (fuel, tolls, vignettes, ferries), entry and vehicle rules for every country on the way, and a shareable roadbook page
 - **Fuel prices** across all API-supported countries, using the same price keys as `/api/fuel/prices`
@@ -85,17 +85,19 @@ npx -y @openvancamp/mcp-server
 | Tool | Description |
 |---|---|
 | `plan_road_trip` | Whole trip between 2–10 places via the OpenVan roadbook: day-by-day overnights, budget, per-country entry and vehicle rules (Schengen 90/180), holidays, safety, power, checklist, link to the roadbook |
+| `get_country_travel_brief` | One country at a glance: entry and allowed stay for your passport, weather, fuel, road rules, holidays for the next 30 days, safety, power plugs, customs, food prices |
 | `get_fuel_prices` | Current retail fuel prices per country |
 | `compare_fuel_prices` | Compare one fuel type across 2–10 countries |
-| `find_cheapest_fuel` | Top cheapest countries by fuel type, filterable by region |
+| `find_cheapest_fuel` | Top cheapest (or most expensive) countries by fuel type, filterable by region |
 | `get_country_travel_weather` | Campervan travel weather score (0-100), solar yield, 7-day forecast for one country |
 | `get_city_travel_weather` | Campervan travel weather of one city or town: today and the coming 7 days |
-| `list_best_weather_countries` | Top N countries with the best travel weather today |
+| `list_best_weather_countries` | Top N countries with the best travel weather today, filterable by region, or sorted by warmth |
 | `list_events` | Vanlife events (expos, festivals, meetups) with filters |
 | `get_event` | Details for one event by slug |
 | `search_stories` | Vanlife news: headline, short summary and link to the story page on openvan.camp (7 languages) |
 | `compare_food_prices` | Food price index comparison between two countries |
 | `get_country_food_prices` | Food price index details for one country |
+| `rank_food_prices` | Countries ranked by food prices (cheapest or most expensive), filterable by region |
 | `get_currency_rate` | Currency conversion between 150+ currencies |
 | `check_visa_rules` | Entry rules for one passport and destination, with confidence and source |
 | `get_route_visa_rules` | Visa rules for a whole route, up to 10 passports, plus the tightest leg |

@@ -32,6 +32,8 @@ import {
   compareVanBasketInput,
   getVanBasket,
   getVanBasketInput,
+  rankFoodPrices,
+  rankFoodPricesInput,
 } from "./tools/vanbasket.js";
 import { getCurrencyRate, getCurrencyRateInput } from "./tools/currency.js";
 import {
@@ -69,6 +71,7 @@ import { getPowerPlugs, getPowerPlugsInput } from "./tools/electricity.js";
 import { getCustomsRules, getCustomsRulesInput } from "./tools/customs.js";
 import { getRoadbookBuildStatus, planRoadTrip, planRoadTripInput, roadbookBuildStatusInput } from "./tools/trip.js";
 import { registerWidgets, toolUiMeta, WIDGETS } from "./ui/widgets.js";
+import { countryBriefInput, getCountryBrief } from "./tools/brief.js";
 
 // Все 25 tools — read-only HTTP GET к openvan.camp. Ни один не меняет состояние,
 // не пишет данные, не удаляет записи. Annotations транслируются в UI хостов
@@ -147,7 +150,7 @@ const INSTRUCTIONS = [
   "Always pass locale = the language the user writes in (en, ru, de, fr, es, pt, tr): answers, cards, place names and units follow it.",
   "When the user describes a trip from A to B (or several stops), call plan_road_trip first: it returns the whole trip (route, days, budget, visas, vehicle stay, road rules, holidays, hazards) in one call. Use the single-topic tools only for follow-up questions.",
   "Weather: get_city_travel_weather for a city, get_country_travel_weather for a country (it also names the best and worst cities for the coming week), list_best_weather_countries to choose where to go.",
-  "A 'no data' answer means OpenVan has no data for it, not that nothing applies: never tell the user a border is open, a road is free or a date has no holidays because data is missing.",
+  "A 'no data' answer means OpenVan.camp has no data for it, not that nothing applies: never tell the user a border is open, a road is free or a date has no holidays because data is missing.",
   "Prices in the cards are converted with fresh exchange rates; quote them as approximate and give the source link.",
 ].join("\n");
 
@@ -208,7 +211,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       name: "openvan-mcp",
       version: VERSION,
-      title: "OpenVan Travel",
+      title: "OpenVan.camp Travel",
       websiteUrl: "https://openvan.camp",
       icons: [
         { src: "https://openvan.camp/icon/android-chrome-192x192.png", mimeType: "image/png", sizes: ["192x192"] },
@@ -249,12 +252,26 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Plan A Road Trip",
       description:
-        "Plan a road trip by campervan or car between 2-10 places with the OpenVan roadbook: distance, driving time and a day-by-day plan with overnights, budget (fuel, tolls, vignettes, ferries), and for every country on the way the entry rule for the given passports and plates, how long you and the vehicle may stay (Schengen 90/180), road rules, holidays on the trip dates, safety and power plugs, plus the main warning and a checklist. Returns a link to the full roadbook the user can open, edit and share. Use this first when the user describes a trip from A to B.",
+        "Plan a road trip by campervan or car between 2-10 places with the OpenVan.camp roadbook: distance, driving time and a day-by-day plan with overnights, budget (fuel, tolls, vignettes, ferries), and for every country on the way the entry rule for the given passports, residence permit and plates, how long you and the vehicle may stay (Schengen 90/180), road rules and city access (low-emission zones and stickers such as Umweltplakette and Crit'Air, Italian ZTL), holidays on the trip dates, safety and power plugs, plus the main warning and a checklist. Returns a link to the full roadbook the user can open, edit and share. Use this first when the user describes a trip from A to B.",
       inputSchema: planRoadTripInput,
       annotations: readOnlyAnnotations("Plan A Road Trip"),
       _meta: toolUiMeta(WIDGETS.trip, "Planning the trip…", "Trip summary ready", true),
     },
     withAttribution(planRoadTrip)
+  );
+
+  // Справка по стране — второй по частоте живой вопрос («что стоит знать про Испанию»).
+  server.registerTool(
+    "get_country_travel_brief",
+    {
+      title: "Country Road-Trip Briefing",
+      description:
+        "Everything to know before driving into one country by campervan or car, in one call: entry rule and how long the person and the vehicle may stay (with passport), travel weather now and this week, fuel prices, tolls and vignettes, public holidays in the next 30 days, safety advice, power plugs, customs limits and food prices. Use it when someone asks what to know about a country, the nuances or a guide for travelling there, or is preparing a trip to it; use the single-topic tools for one narrow question.",
+      inputSchema: countryBriefInput,
+      annotations: readOnlyAnnotations("Country Road-Trip Briefing"),
+      _meta: toolUiMeta(WIDGETS.brief, "Gathering the country briefing…", "Country briefing ready"),
+    },
+    withAttribution(getCountryBrief)
   );
 
   // Ход сборки роудбука — только для карточки plan_road_trip (модель его не видит):
@@ -278,7 +295,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Get Fuel Prices",
       description:
-        "Current retail fuel prices for all API-supported countries. Covers gasoline, diesel, LPG, CNG, E85, kerosene and grade variants. Pass country_code to get one country in detail; omit it for a summary list.",
+        "Current retail fuel prices for all API-supported countries. Covers gasoline, diesel, LPG, CNG, E85, kerosene and grade variants. Pass country_code to get one country in detail; omit it for a summary list. Use it for the price of petrol, diesel, LPG/autogas/propane or CNG in one country; without a country it gives an overview.",
       inputSchema: { ...getFuelPricesInput, locale: CARD_LOCALE },
       annotations: readOnlyAnnotations("Get Fuel Prices"),
       _meta: toolUiMeta(WIDGETS.fuel, "Checking fuel prices…", "Fuel prices ready"),
@@ -290,7 +307,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Compare Fuel Prices",
       description:
-        "Compare current prices for one fuel type across 2-10 countries. Returns sorted table cheapest-first.",
+        "Compare current prices for one fuel type across 2-10 countries. Returns sorted table cheapest-first. Use it when someone asks which of two or more named countries has cheaper or more expensive fuel.",
       inputSchema: { ...compareFuelPricesInput, locale: CARD_LOCALE },
       annotations: readOnlyAnnotations("Compare Fuel Prices"),
       _meta: toolUiMeta(WIDGETS.fuel, "Comparing fuel prices…", "Comparison ready"),
@@ -302,7 +319,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Find Cheapest Fuel",
       description:
-        "Find the cheapest countries for a given fuel type in a region (or worldwide). Useful for route planning.",
+        "Rank countries by the price of a fuel type in a region (or worldwide): the cheapest first, or with order=most_expensive the most expensive first. Useful for route planning. Use it for «where is fuel cheapest» and, with order=most_expensive, «where is fuel the most expensive», in a region or worldwide.",
       inputSchema: { ...findCheapestFuelInput, locale: CARD_LOCALE },
       annotations: readOnlyAnnotations("Find Cheapest Fuel"),
       _meta: toolUiMeta(WIDGETS.fuel, "Looking for the cheapest fuel…", "Cheapest fuel ready"),
@@ -316,7 +333,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Travel Weather In A Country",
       description:
-        "How suitable the weather in a whole country is for travelling and sleeping in a campervan, as a 0-100 score: overall travel score, sleep score, solar panel yield, driving conditions, awning safety, condensation risk, a 7-day forecast, and the 3 best and 3 toughest cities for the coming week. Country-level: for a named city use get_city_travel_weather.",
+        "How suitable the weather in a whole country is for travelling and sleeping in a campervan, as a 0-100 score: overall travel score, sleep score, solar panel yield, driving conditions, awning safety, condensation risk, a 7-day forecast, and the 3 best and 3 toughest cities for the coming week. Country-level: for a named city use get_city_travel_weather. Use it when someone asks what the weather is like in a country, where in a country it is warmer, colder or sunnier, which of its cities are best or worst this week, or whether it is too cold or rainy to sleep in a van there now.",
       inputSchema: getVanSkyWeatherInput,
       annotations: readOnlyAnnotations("Travel Weather In A Country"),
       _meta: toolUiMeta(WIDGETS.weather, "Checking travel weather…", "Travel weather ready"),
@@ -328,7 +345,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Travel Weather In A City",
       description:
-        "How suitable the weather in one city or town is for travelling and sleeping in a campervan, as a 0-100 score for today and for the coming 7 days, with sleep, driving and solar scores and daily scores. Use this, not get_country_travel_weather, when the user names a place (Barcelona, Málaga, Alicante).",
+        "How suitable the weather in one city or town is for travelling and sleeping in a campervan, as a 0-100 score for today and for the coming 7 days, with sleep, driving and solar scores and daily scores. Use this, not get_country_travel_weather, when the user names a place (Barcelona, Málaga, Alicante). Use it for the weather in one named city, town or place today, tomorrow or this week.",
       inputSchema: getCityWeatherInput,
       annotations: readOnlyAnnotations("Travel Weather In A City"),
       _meta: toolUiMeta(WIDGETS.weather, "Checking travel weather…", "Travel weather ready"),
@@ -340,7 +357,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Countries With The Best Travel Weather",
       description:
-        "List the N countries where today's weather is best for travelling by campervan, highest 0-100 travel score first.",
+        "List the N countries where today's weather is best for travelling by campervan, highest 0-100 travel score first. Use it when no country is named and someone asks where to go for warm or good weather right now — worldwide or in a region (region=europe…); with sort=warmest only when they literally ask where it is warmest or hottest (it ranks by temperature alone, so deserts come first; «warm and pleasant», «warm and dry» → the default score). These are today's conditions and the coming days, not a forecast for a later month: for «in November» say so.",
       inputSchema: { ...listVanSkyTopInput, locale: CARD_LOCALE },
       annotations: readOnlyAnnotations("Countries With The Best Travel Weather"),
       _meta: toolUiMeta(WIDGETS.bestWeather, "Ranking countries by weather…", "Best travel weather ready"),
@@ -394,7 +411,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Compare Food Prices",
       description:
-        "Compare food price index between two countries (world average = 100). Higher number = more expensive food.",
+        "Compare food price index between two countries (world average = 100). Higher number = more expensive food. Use it when someone asks where food is cheaper between two countries.",
       inputSchema: { ...compareVanBasketInput, locale: CARD_LOCALE },
       annotations: readOnlyAnnotations("Compare Food Prices"),
       _meta: toolUiMeta(WIDGETS.food, "Comparing food prices…", "Comparison ready"),
@@ -406,12 +423,24 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Get Food Price Index",
       description:
-        "Food price index for one country (world average = 100): how expensive groceries are there, with its yearly history.",
+        "Food price index for one country (world average = 100): how expensive groceries are there, with its yearly history. Use it when someone asks how expensive food, groceries or living is in a country.",
       inputSchema: { ...getVanBasketInput, locale: CARD_LOCALE },
       annotations: readOnlyAnnotations("Get Food Price Index"),
       _meta: toolUiMeta(WIDGETS.food, "Checking food prices…", "Food prices ready"),
     },
     withAttribution(withCardLocale(getVanBasket))
+  );
+  server.registerTool(
+    "rank_food_prices",
+    {
+      title: "Rank Countries By Food Prices",
+      description:
+        "Rank countries by food price index (world average = 100) in a region or worldwide: the cheapest first, or with order=most_expensive the most expensive first. Use it when someone asks where food or groceries are cheapest or most expensive.",
+      inputSchema: { ...rankFoodPricesInput, locale: CARD_LOCALE },
+      annotations: readOnlyAnnotations("Rank Countries By Food Prices"),
+      _meta: toolUiMeta(WIDGETS.food, "Ranking food prices…", "Food price ranking ready"),
+    },
+    withAttribution(withCardLocale(rankFoodPrices))
   );
 
   // Currency
@@ -420,7 +449,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Convert Currency",
       description:
-        "Convert an amount between two currencies using live rates (150+ currencies, daily updates).",
+        "Convert an amount between two currencies using live rates (150+ currencies, daily updates). Use it for exchange rates and converting an amount between currencies.",
       inputSchema: { ...getCurrencyRateInput, locale: CARD_LOCALE },
       annotations: readOnlyAnnotations("Convert Currency"),
       _meta: toolUiMeta(WIDGETS.currency, "Converting…", "Conversion ready"),
@@ -472,7 +501,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Toll Road Rates By Country",
       description:
-        "Toll reference for one country: payment system, per-km rates by vehicle class (car, campervan up to 3.5 t, over 3.5 t), vignette prices for every duration, concession sections and toll bridges/tunnels, each with verification date and source.",
+        "Toll reference for one country: payment system, per-km rates by vehicle class (car, campervan up to 3.5 t, over 3.5 t), vignette prices for every duration, concession sections and toll bridges/tunnels, each with verification date and source. Use it for toll roads, motorway fees, whether a vignette is needed and what it costs in one country.",
       inputSchema: getTollRatesInput,
       annotations: readOnlyAnnotations("Toll Road Rates By Country"),
       _meta: toolUiMeta(WIDGETS.tolls, "Checking toll roads…", "Toll roads ready"),
@@ -484,7 +513,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Estimate Tolls For A Route",
       description:
-        "Estimate toll cost for a road trip from 2-10 place names: per-km tolls, vignettes, bridges and tunnels, as a EUR range with a per-country breakdown. Flags partial results when a country on the route has no data.",
+        "Estimate toll cost for a road trip from 2-10 place names: per-km tolls, vignettes, bridges and tunnels, as a EUR range with a per-country breakdown. Flags partial results when a country on the route has no data. Use it only for the toll cost between named places when no other trip details are asked; for a whole trip use plan_road_trip.",
       inputSchema: estimateRouteTollsInput,
       annotations: readOnlyAnnotations("Estimate Tolls For A Route"),
       _meta: toolUiMeta(WIDGETS.tolls, "Estimating tolls…", "Toll estimate ready"),
@@ -498,7 +527,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Holidays And Peak Traffic Days",
       description:
-        "Public holidays, school holidays (often regional, with ISO 3166-2 region codes) and official peak traffic days (France, Bison Futé) in one country for a period of up to 400 days. A country without data returns an error saying so — never present that as \"no holidays\".",
+        "Public holidays, school holidays (often regional, with ISO 3166-2 region codes) and official peak traffic days (France, Bison Futé) in one country for a period of up to 400 days. A country without data returns an error saying so — never present that as \"no holidays\". Use it for public holidays, days off, school holidays and peak traffic days.",
       inputSchema: getHolidaysInput,
       annotations: readOnlyAnnotations("Holidays And Peak Traffic Days"),
       _meta: toolUiMeta(WIDGETS.country, "Checking holidays…", "Holidays ready"),
@@ -512,7 +541,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Travel Hazards In A Country",
       description:
-        "Situation now in one country: UK FCDO travel advice level and current GDACS natural disasters (flood, earthquake, tropical cyclone, wildfire, drought, volcano) with alert level green/orange/red. Not a forecast.",
+        "Situation now in one country: UK FCDO travel advice level and current GDACS natural disasters (flood, earthquake, tropical cyclone, wildfire, drought, volcano) with alert level green/orange/red. Not a forecast. Use it when someone asks whether it is safe to go to a country now, about travel warnings or natural disasters.",
       inputSchema: getTravelHazardsInput,
       annotations: readOnlyAnnotations("Travel Hazards In A Country"),
       _meta: toolUiMeta(WIDGETS.country, "Checking travel hazards…", "Hazards ready"),
@@ -524,7 +553,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Active Fires In An Area",
       description:
-        "NASA FIRMS VIIRS satellite fire detections of the last 48 hours in a bounding box up to 10°×10°, strongest first, with fire radiative power in MW.",
+        "NASA FIRMS VIIRS satellite fire detections of the last 48 hours in a bounding box up to 10°×10°, strongest first, with fire radiative power in MW. Use it for wildfires right now near a place or in a country: bbox is west,south,east,north in degrees — longitude first (Portugal ≈ -9.6,36.9,-6.1,42.2).",
       inputSchema: { ...getActiveFiresInput, locale: CARD_LOCALE },
       annotations: readOnlyAnnotations("Active Fires In An Area"),
       _meta: toolUiMeta(WIDGETS.country, "Checking active fires…", "Fires ready"),
@@ -538,7 +567,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Power Plugs And Voltage",
       description:
-        "Plug types (IEC A–N), mains voltage and frequency for one country, with the source of the value, plus the campsite hook-up connector in Europe (CEE17).",
+        "Plug types (IEC A–N), mains voltage and frequency for one country, with the source of the value, plus the campsite hook-up connector in Europe (CEE17). Use it for socket and plug types, adapters, mains voltage and campsite hook-ups.",
       inputSchema: getPowerPlugsInput,
       annotations: readOnlyAnnotations("Power Plugs And Voltage"),
       _meta: toolUiMeta(WIDGETS.country, "Checking power plugs…", "Power plugs ready"),
@@ -552,7 +581,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Customs Rules On Entry By Car",
       description:
-        "Customs rules when driving into a country, optionally from a given country: food bans, cash declaration, alcohol and tobacco limits, goods value, fuel in a canister. Each rule carries a verbatim official quote and source link. A country without data returns an error saying so — never present that as \"nothing is restricted\".",
+        "Customs rules when driving into a country, optionally from a given country: food bans, cash declaration, alcohol and tobacco limits, goods value, fuel in a canister. Each rule carries a verbatim official quote and source link. A country without data returns an error saying so — never present that as \"nothing is restricted\". Use it for what you may bring in by car: alcohol, tobacco, cash, meat and other food, goods limits.",
       inputSchema: getCustomsRulesInput,
       annotations: readOnlyAnnotations("Customs Rules On Entry By Car"),
       _meta: toolUiMeta(WIDGETS.country, "Checking customs rules…", "Customs rules ready"),
@@ -577,7 +606,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "License Plate Format And Region Codes",
       description:
-        "How a country's license plate looks and reads (standard, size, format), its plate types (standard, diplomatic, police, taxi…) with example numbers, and every region code on its plates, grouped by region — e.g. which region is 77 or 199 on Russian plates.",
+        "How a country's license plate looks and reads (standard, size, format), its plate types (standard, diplomatic, police, taxi…) with example numbers, and every region code on its plates, grouped by region — e.g. which region is 77 or 199 on Russian plates. Use it for what a plate region code means (77, 777, AA…) and a country's plate format.",
       inputSchema: getLicensePlateCountryInput,
       annotations: readOnlyAnnotations("License Plate Format And Region Codes"),
       _meta: toolUiMeta(WIDGETS.plates, "Loading plate formats…", "Plate formats ready"),
@@ -589,7 +618,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Check A License Plate",
       description:
-        "Validate a plate number against the country's format (look-alike letters are normalized) and say which region its code belongs to. Pass type to check against a specific plate type's format. Never identifies the owner or the vehicle's location.",
+        "Validate a plate number against the country's format (look-alike letters are normalized) and say which region its code belongs to. Pass type to check against a specific plate type's format. Never identifies the owner or the vehicle's location. Use it to check a specific plate number.",
       inputSchema: checkLicensePlateInput,
       annotations: readOnlyAnnotations("Check A License Plate"),
       _meta: toolUiMeta(WIDGETS.plates, "Checking the plate…", "Plate checked"),
@@ -601,7 +630,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "License Plate Image",
       description:
-        "Draw an illustrative image of a country's standard civilian license plate (PNG shown inline, plus SVG/PNG links). The number must match the country's standard format. Official, police, military and diplomatic plates are not drawn.",
+        "Draw an illustrative image of a country's standard civilian license plate (PNG shown inline, plus SVG/PNG links). The number must match the country's standard format. Official, police, military and diplomatic plates are not drawn. Use it to draw or show a picture of a plate.",
       inputSchema: { ...getLicensePlateImageInput, locale: CARD_LOCALE },
       annotations: readOnlyAnnotations("License Plate Image"),
       _meta: toolUiMeta(WIDGETS.plates, "Drawing the plate…", "Plate ready"),

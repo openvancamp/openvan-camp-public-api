@@ -33,7 +33,7 @@ export async function compareVanBasket({ from, to }: { from: string; to: string 
     content: [
       {
         type: "text" as const,
-        text: `VanBasket comparison ${from.toUpperCase()} → ${to.toUpperCase()}:\n\n${JSON.stringify(data, null, 2)}\n\nIndex is relative to world average = 100. Higher = more expensive food.`,
+        text: `Food price comparison ${from.toUpperCase()} → ${to.toUpperCase()}:\n\n${JSON.stringify(data, null, 2)}\n\nIndex is relative to world average = 100. Higher = more expensive food.`,
       },
     ],
     ...(typeof data.diff_percent === "number"
@@ -68,7 +68,7 @@ export async function getVanBasket({ country_code }: { country_code: string }) {
     content: [
       {
         type: "text" as const,
-        text: `VanBasket food index for ${country_code.toUpperCase()}:\n\n${JSON.stringify(data, null, 2)}\n\nIndex is relative to world average = 100.`,
+        text: `Food price index for ${country_code.toUpperCase()}:\n\n${JSON.stringify(data, null, 2)}\n\nIndex is relative to world average = 100.`,
       },
     ],
     ...(country && typeof country.vanbasket_index === "number"
@@ -85,5 +85,65 @@ export async function getVanBasket({ country_code }: { country_code: string }) {
           },
         }
       : {}),
+  };
+}
+
+
+// ------------------------------------------------------------------
+// rank_food_prices — где продукты дешевле / дороже всего (регион или мир)
+// ------------------------------------------------------------------
+
+export const rankFoodPricesInput = {
+  region: z
+    .enum(["world", "europe", "asia", "africa", "north_america", "south_america", "oceania"])
+    .default("world")
+    .describe("Only countries of this region. Default: world."),
+  order: z
+    .enum(["cheapest", "most_expensive"])
+    .default("cheapest")
+    .describe("cheapest first (default) or most_expensive first."),
+  limit: z
+    .preprocess((v) => (typeof v === "number" ? Math.min(Math.max(Math.round(v), 1), 20) : v), z.number().int().min(1).max(20))
+    .default(10)
+    .describe("How many countries to return."),
+};
+
+type RankedFood = FoodCountry & { pct_vs_world?: number; region?: string };
+
+export async function rankFoodPrices({ region = "world", order = "cheapest", limit = 10 }: {
+  region?: string; order?: "cheapest" | "most_expensive"; limit?: number;
+}) {
+  const raw = (await apiGet("/api/vanbasket/countries")) as { data?: RankedFood[] | Record<string, RankedFood> };
+  const pricey = order === "most_expensive";
+  // API отдаёт страны объектом с ключами-кодами (иногда списком) — принимаем оба вида.
+  const all = Array.isArray(raw.data) ? raw.data : Object.values(raw.data ?? {});
+  const rows = all
+    .filter((c) => typeof c.vanbasket_index === "number" && (region === "world" || c.region === region))
+    .sort((a, b) => (pricey ? b.vanbasket_index! - a.vanbasket_index! : a.vanbasket_index! - b.vanbasket_index!))
+    .slice(0, limit);
+  if (rows.length === 0) {
+    return { content: [{ type: "text" as const, text: `No food price data for region "${region}".` }], isError: true };
+  }
+  const table = rows
+    .map((c, i) => `  ${i + 1}. ${c.country_code}  ${String(c.country_name).padEnd(24)}  index ${c.vanbasket_index}`)
+    .join("\n");
+  return {
+    content: [{
+      type: "text" as const,
+      text: `${pricey ? "Most expensive" : "Cheapest"} food in ${region} (food price index, world average = 100):\n\n${table}`,
+    }],
+    structuredContent: {
+      mode: "ranking",
+      order,
+      region,
+      rows: rows.map((c) => ({
+        code: String(c.country_code).toUpperCase(),
+        name: c.country_name ?? c.country_code,
+        index: c.vanbasket_index,
+        pct_vs_world: typeof c.pct_vs_world === "number" ? c.pct_vs_world : null,
+      })),
+      url: await foodPageUrl(),
+      source: SOURCE,
+    },
   };
 }

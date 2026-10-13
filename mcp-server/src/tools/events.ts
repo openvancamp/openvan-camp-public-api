@@ -71,7 +71,7 @@ export const listEventsInput = {
     .enum(["en", "ru", "de", "fr", "es", "pt", "tr"])
     .default("en")
     .describe("Language of the conversation with the user: event names, cities and the card come in it. Always pass it when the user writes in one of these languages."),
-  limit: z.number().int().min(1).max(50).default(15),
+  limit: z.preprocess((v) => (typeof v === "number" ? Math.min(Math.max(Math.round(v), 1), 50) : v), z.number().int().min(1).max(50)).default(15),
 };
 
 export async function listEvents(args: {
@@ -173,7 +173,7 @@ export async function getEvent({ slug, locale }: { slug: string; locale: string 
       e.organizer ? `Organizer: ${e.organizer}` : null,
       e.admission_price ? `Price: ${e.admission_price}` : null,
       e.official_url ? `Official: ${e.official_url}` : null,
-      e.url ? `On OpenVan: ${e.url}` : null,
+      e.url ? `On OpenVan.camp: ${e.url}` : null,
       e.summary ? `\n${e.summary}` : null,
       e.description && !e.summary ? `\n${e.description}` : null,
     ].filter(Boolean);
