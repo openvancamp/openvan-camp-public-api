@@ -23,7 +23,7 @@ SDK_VERSION=$(jq -r .version sdk/package.json)
 PY_VERSION=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' python-sdk/src/openvan/client.py)
 REGISTRY_NAME=$(jq -r .name mcp-server/server.json)
 # Tools hidden from tools/list for clients without cards (hideFromToolList) are not counted.
-TOOLS=$(( $(grep -c 'registerTool(' mcp-server/src/server.ts) - $(grep -c 'hideFromToolList(server' mcp-server/src/server.ts) ))
+TOOLS=$(( $(grep -c 'registerTool(' mcp-server/src/server.ts) - $(grep -c 'hideFromToolList(server, ' mcp-server/src/server.ts) ))
 SPEC_VERSION=$(sed -n 's/^  version: *//p' openapi.yaml | head -1 | tr -d "'\"")
 
 echo "== Versions in this repository: mcp-server $MCP_VERSION, sdk $SDK_VERSION, python $PY_VERSION, $TOOLS tools, openapi $SPEC_VERSION"
