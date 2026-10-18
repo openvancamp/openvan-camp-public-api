@@ -7,8 +7,8 @@
 #
 # Secrets:
 #   NPM_TOKEN                   npm automation token (not needed once npm Trusted Publishing is set up)
-#   MCP_REGISTRY_GITHUB_TOKEN   GitHub token of Kopaev — the registry name is io.github.Kopaev/openvan-travel,
-#                               so OIDC of the openvancamp org cannot publish it
+#   MCP_REGISTRY_GITHUB_TOKEN   GitHub token of Kopaev (Owner and public member of openvancamp) — publishes
+#                               io.github.openvancamp/openvan-travel (until 0.9.3: io.github.Kopaev/openvan-travel)
 # PyPI needs no secret: it trusts this workflow (Trusted Publishing, environment "pypi").
 
 name: Release

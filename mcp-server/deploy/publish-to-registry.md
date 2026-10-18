@@ -6,15 +6,15 @@
 
 - PulseMCP **не принимает прямых submission'ов** — только auto-index из Official Registry
 - То же касается большинства других крупных каталогов 2026-го года
-- Реестр даёт канонический namespace: `io.github.Kopaev/openvan-travel` — так нас однозначно находят все хосты (ChatGPT, Claude, Cursor, Gemini CLI)
+- Реестр даёт канонический namespace: `io.github.openvancamp/openvan-travel` (до 0.9.3 — `io.github.Kopaev/openvan-travel`, помечен deprecated) — так нас однозначно находят все хосты (ChatGPT, Claude, Cursor, Gemini CLI)
 - Не требует `npm publish` — мы регистрируемся как **remote server** (есть HTTPS endpoint)
 
 ## Что уже готово в репо
 
 - ✅ [`mcp-server/server.json`](../server.json) — registry metadata (валидирована против [официальной схемы](https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json))
-- ✅ `mcpName` в `package.json` = `io.github.Kopaev/openvan-travel`
+- ✅ `mcpName` в `package.json` = `io.github.openvancamp/openvan-travel`
 - ✅ Публичный HTTPS endpoint `https://mcp.openvan.camp/mcp`
-- ✅ Публичный GitHub репо `openvancamp/openvan-camp-public-api` (до 2026-09-28 — `Kopaev/…`, старый адрес редиректит; namespace реестра остаётся `io.github.Kopaev`)
+- ✅ Публичный GitHub репо `openvancamp/openvan-camp-public-api` (до 2026-09-28 — `Kopaev/…`, старый адрес редиректит; namespace реестра с 0.9.4 — `io.github.openvancamp`)
 
 ## Что сделать (на твоей Mac, ~10 минут)
 
@@ -48,7 +48,7 @@ cat server.json    # убедись что файл есть
 mcp-publisher login github
 ```
 
-Откроется браузер с device code flow. Войди как **Kopaev** (важно — namespace `io.github.Kopaev` требует авторизации именно под этим юзером GitHub).
+Откроется браузер с device code flow. Войди как **Kopaev** (важно — namespace `io.github.openvancamp` требует юзера GitHub с публичным членством в организации openvancamp).
 
 ### 4. Опубликовать
 
@@ -56,7 +56,7 @@ mcp-publisher login github
 mcp-publisher publish
 ```
 
-Ответ: `Successfully published io.github.Kopaev/openvan-travel v0.2.1`.
+Ответ: `Successfully published io.github.openvancamp/openvan-travel v0.9.4`.
 
 ### 5. Проверить публикацию
 
@@ -70,10 +70,10 @@ curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=openvan-trave
 
 **Сразу (минуты-часы):**
 - Запись доступна через Official Registry API
-- Клиенты типа ChatGPT, Claude Desktop, Gemini CLI могут найти нас по имени `io.github.Kopaev/openvan-travel`
+- Клиенты типа ChatGPT, Claude Desktop, Gemini CLI могут найти нас по имени `io.github.openvancamp/openvan-travel`
 
 **В течение недели:**
-- **PulseMCP** (наибольший каталог, 544 клиента) ингестит нашу запись, получим листинг на `pulsemcp.com/servers/io.github.Kopaev/openvan-travel`
+- **PulseMCP** (наибольший каталог, 544 клиента) ингестит нашу запись, получим листинг на `pulsemcp.com/servers/io.github.openvancamp/openvan-travel`
 - **Smithery** auto-sync
 - **Glama**, **mcp.so**, **mcpservers.com** и прочие downstream
 
@@ -95,7 +95,7 @@ mcp-publisher publish
 |---|---|
 | `Registry validation failed for package` | Проверь что `mcpName` в package.json совпадает с `name` в server.json |
 | `Invalid or expired Registry JWT token` | Перезапусти `mcp-publisher login github` |
-| `Permission denied (namespace)` | Авторизован не под `Kopaev` — выйди через `mcp-publisher logout` и залогинься повторно |
+| `Permission denied (namespace)` | Авторизован не под `Kopaev` или членство в openvancamp не Public — выйди через `mcp-publisher logout` и залогинься повторно |
 | `Schema validation: name does not match pattern` | Имя должно быть `io.github.<github-user>/<anything>`, без пробелов и подчёркиваний в начале |
 
 ## Альтернативный путь (если будешь делать npm publish)

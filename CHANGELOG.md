@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-18
+
+### Changed — MCP server v0.9.4
+- MCP Registry name moved to the organization: `io.github.openvancamp/openvan-travel` (was `io.github.Kopaev/openvan-travel`,
+  now deprecated). No changes to tools or the endpoint `https://mcp.openvan.camp/mcp`.
+
 ## 2026-10-13
 
 ### Added — MCP server v0.9.3
