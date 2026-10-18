@@ -128,7 +128,7 @@ export const BRIDGE_JS = `
     if(!data||typeof data!=="object")return;
     if(typeof data.locale==="string")ctx.dataLocale=data.locale;
     // «Нет данных» — обычный ответ инструмента, карточке рисовать нечего: показываем текст ответа.
-    if(data.nodata){fallback({content:[{type:"text",text:String(data.message||"")}]});return}
+    if(data.nodata){fallback({isError:true,content:[{type:"text",text:String(data.message||"")}]});return}
     lastData=data;rendered=true;
     handlers.forEach(function(fn){try{fn(data,ctx)}catch(e){console.error(e)}});
     sizeSoon();
@@ -163,15 +163,17 @@ export const BRIDGE_JS = `
     if(m.method&&m.id!=null){post({jsonrpc:"2.0",id:m.id,result:{}})}
   });
   var NODATA={en:"No data for this request",ru:"Нет данных по этому запросу",de:"Keine Daten zu dieser Anfrage",fr:"Pas de données pour cette demande",es:"No hay datos para esta solicitud",pt:"Sem dados para este pedido",tr:"Bu istek için veri yok"};
-  // Ответ без данных для карточки (ошибка или «ничего не нашлось»): заголовок на языке человека,
-  // ниже — текст ответа как есть. rendered=true — карточки, которые ждут результат, перестают ждать.
+  // Ответ без данных для карточки: текст ответа как есть. Заголовок «нет данных» — только для ошибки
+  // или пустого ответа: хосты без structuredContent (инспекторы, каталоги) присылают и обычный ответ
+  // с данными одним текстом. rendered=true — карточки, которые ждут результат, перестают ждать.
   function fallback(r){
     rendered=true;
     var txt=(r.content||[]).filter(function(c){return c.type==="text"}).map(function(c){return c.text}).join("\\n").replace(/_Data: OpenVan.camp[^\\n]*/g,"").trim();
     var el=document.getElementById("app");
     if(!el)return;
-    el.innerHTML='<div class="card"><div class="hero"><h1 class="h1"></h1></div><div class="body"><div class="muted" style="white-space:pre-wrap"></div></div></div>';
-    el.querySelector("h1").textContent=NODATA[locale()]||NODATA.en;
+    var noData=r.isError||!txt;
+    el.innerHTML='<div class="card">'+(noData?'<div class="hero"><h1 class="h1"></h1></div>':'')+'<div class="body"><div class="muted" style="white-space:pre-wrap"></div></div></div>';
+    if(noData)el.querySelector("h1").textContent=NODATA[locale()]||NODATA.en;
     el.querySelector(".muted").textContent=txt;
     sizeSoon();
   }

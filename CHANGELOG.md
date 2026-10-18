@@ -2,6 +2,10 @@
 
 ## 2026-10-18
 
+### Fixed — MCP server v0.9.6
+- Cards in hosts that pass only the text of a result (MCP inspectors, catalogs) no longer show a "No data for this
+  request" header above real data; the header stays for errors and empty answers.
+
 ### Changed — MCP server v0.9.5
 - The internal `get_roadbook_build_status` tool is no longer listed in `tools/list` for clients without cards (Glama and
   other catalogs); the trip card can still call it.
