@@ -7,8 +7,8 @@
 #
 # Secrets:
 #   NPM_TOKEN                   npm automation token (not needed once npm Trusted Publishing is set up)
-#   MCP_REGISTRY_GITHUB_TOKEN   GitHub token of Kopaev (Owner and public member of openvancamp) — publishes
-#                               io.github.openvancamp/openvan-travel (until 0.9.3: io.github.Kopaev/openvan-travel)
+# The MCP Registry needs no secret: io.github.openvancamp/openvan-travel belongs to this repository's
+# organization, so the workflow logs in with GitHub OIDC (until 0.9.3 the name was io.github.Kopaev/openvan-travel).
 # PyPI needs no secret: it trusts this workflow (Trusted Publishing, environment "pypi").
 
 name: Release
@@ -85,12 +85,7 @@ jobs:
       - name: Publish to MCP Registry
         if: steps.pkg.outputs.dir == 'mcp-server'
         working-directory: mcp-server
-        env:
-          REGISTRY_TOKEN: ${{ secrets.MCP_REGISTRY_GITHUB_TOKEN }}
         run: |
-          if [ -z "$REGISTRY_TOKEN" ]; then
-            echo "::warning::MCP_REGISTRY_GITHUB_TOKEN is not set, registry not updated"; exit 0
-          fi
           name=$(jq -r .name server.json)
           version=${{ steps.pkg.outputs.version }}
           if curl -sf "https://registry.modelcontextprotocol.io/v0.1/servers?search=${name#*/}" \
@@ -98,7 +93,7 @@ jobs:
             echo "$name $version is already in the registry"; exit 0
           fi
           curl -sL https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz | tar xz mcp-publisher
-          ./mcp-publisher login github -token "$REGISTRY_TOKEN"
+          ./mcp-publisher login github-oidc
           ./mcp-publisher publish
 
       - name: GitHub Release
