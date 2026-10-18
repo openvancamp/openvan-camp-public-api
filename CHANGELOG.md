@@ -2,6 +2,11 @@
 
 ## 2026-10-18
 
+### Changed — MCP server v0.9.5
+- The internal `get_roadbook_build_status` tool is no longer listed in `tools/list` for clients without cards (Glama and
+  other catalogs); the trip card can still call it.
+- Food prices: country names and links follow the user's language.
+
 ### Changed — MCP server v0.9.4
 - MCP Registry name moved to the organization: `io.github.openvancamp/openvan-travel` (was `io.github.Kopaev/openvan-travel`,
   now deprecated). No changes to tools or the endpoint `https://mcp.openvan.camp/mcp`.

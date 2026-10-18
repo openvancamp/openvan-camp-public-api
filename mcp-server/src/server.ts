@@ -203,6 +203,18 @@ export function hostFromUserAgent(ua: string | undefined): HostKind {
   return "other";
 }
 
+/** Убирает инструмент из ответа tools/list, не мешая его вызывать по имени. */
+function hideFromToolList(server: McpServer, name: string): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handlers = (server.server as any)._requestHandlers as Map<string, (req: unknown, extra: unknown) => Promise<{ tools: { name: string }[] }>>;
+  const list = handlers.get("tools/list");
+  if (!list) return;
+  handlers.set("tools/list", async (req, extra) => {
+    const result = await list(req, extra);
+    return { ...result, tools: result.tools.filter((t) => t.name !== name) };
+  });
+}
+
 /** Языки, которые знают карточки и сайт. */
 const LOCALES = new Set(["en", "ru", "de", "fr", "es", "pt", "tr"]);
 
@@ -288,6 +300,11 @@ export function createServer(host: HostKind = "other"): McpServer {
     },
     getRoadbookBuildStatus
   );
+  // Пометку visibility:["app"] понимают только хосты с карточками (Claude, ChatGPT). Остальные
+  // клиенты и каталоги (Glama) показывали служебный инструмент модели и в списке. Убираем его
+  // из tools/list для них, но вызов оставляем: карточка в Claude Desktop через npx (host
+  // "other") продолжает опрашивать ход сборки.
+  if (host === "other") hideFromToolList(server, "get_roadbook_build_status");
 
   // Fuel prices
   server.registerTool(

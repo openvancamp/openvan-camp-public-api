@@ -7,14 +7,28 @@ const SOURCE = "OpenVan.camp (CC BY 4.0), based on ICP 2021 and IMF CPI";
 
 type FoodCountry = { country_code?: string; country_name?: string; vanbasket_index?: number };
 
-async function foodPageUrl(code?: string): Promise<string> {
+async function foodPageUrl(code?: string, locale = "en"): Promise<string> {
   const ref = code ? await countryRef(code) : null;
-  return ref ? `${SITE}/en/tools/vanbasket/${ref.slug}` : `${SITE}/en/tools/vanbasket`;
+  return ref ? `${SITE}/${locale}/tools/vanbasket/${ref.slug}` : `${SITE}/${locale}/tools/vanbasket`;
 }
 
-const ref = (c: FoodCountry | undefined, fallback: string) => ({
+/** API отдаёт названия только по-английски — переводим по коду, чтобы ответ шёл на языке пользователя. */
+function countryName(code: string | undefined, fallback: string | undefined, locale = "en"): string {
+  const cc = String(code ?? "").toUpperCase();
+  if (locale !== "en" && /^[A-Z]{2}$/.test(cc)) {
+    try {
+      const name = new Intl.DisplayNames([locale], { type: "region" }).of(cc);
+      if (name && name.toUpperCase() !== cc) return name;
+    } catch {
+      // нет данных ICU для языка — оставляем английское
+    }
+  }
+  return fallback ?? cc;
+}
+
+const ref = (c: FoodCountry | undefined, fallback: string, locale?: string) => ({
   code: (c?.country_code ?? fallback).toUpperCase(),
-  name: c?.country_name ?? fallback.toUpperCase(),
+  name: countryName(c?.country_code ?? fallback, c?.country_name ?? fallback.toUpperCase(), locale),
   index: c?.vanbasket_index ?? null,
 });
 
@@ -23,7 +37,7 @@ export const compareVanBasketInput = {
   to: z.string().length(2).describe("Destination country ISO alpha-2 code."),
 };
 
-export async function compareVanBasket({ from, to }: { from: string; to: string }) {
+export async function compareVanBasket({ from, to, locale }: { from: string; to: string; locale?: string }) {
   const raw = await apiGet("/api/vanbasket/compare", { from, to });
   // Shape is loose in the public API — we pass through with light formatting.
   const wrapper = raw as { data?: Record<string, unknown>; success?: boolean };
@@ -40,12 +54,12 @@ export async function compareVanBasket({ from, to }: { from: string; to: string 
       ? {
           structuredContent: {
             mode: "compare",
-            from: ref(data.from as FoodCountry, from),
-            to: ref(data.to as FoodCountry, to),
+            from: ref(data.from as FoodCountry, from, locale),
+            to: ref(data.to as FoodCountry, to, locale),
             diff_percent: data.diff_percent,
             budget_100: data.budget_100 ?? null,
             cheaper: Boolean(data.cheaper),
-            url: await foodPageUrl(to),
+            url: await foodPageUrl(to, locale),
             source: SOURCE,
           },
         }
@@ -57,7 +71,7 @@ export const getVanBasketInput = {
   country_code: z.string().length(2).describe("ISO 3166-1 alpha-2 country code."),
 };
 
-export async function getVanBasket({ country_code }: { country_code: string }) {
+export async function getVanBasket({ country_code, locale }: { country_code: string; locale?: string }) {
   const cc = country_code.toLowerCase();
   const raw = await apiGet(`/api/vanbasket/countries/${cc}`);
   const wrapper = raw as { data?: Record<string, unknown> };
@@ -75,12 +89,12 @@ export async function getVanBasket({ country_code }: { country_code: string }) {
       ? {
           structuredContent: {
             mode: "country",
-            country: ref(country, country_code),
+            country: ref(country, country_code, locale),
             index: country.vanbasket_index,
             pct_vs_world: country.pct_vs_world ?? country.vanbasket_index - 100,
             data_quality: country.data_quality ?? null,
             updated_at: country.last_updated_at ?? null,
-            url: await foodPageUrl(country_code),
+            url: await foodPageUrl(country_code, locale),
             source: SOURCE,
           },
         }
@@ -110,8 +124,8 @@ export const rankFoodPricesInput = {
 
 type RankedFood = FoodCountry & { pct_vs_world?: number; region?: string };
 
-export async function rankFoodPrices({ region = "world", order = "cheapest", limit = 10 }: {
-  region?: string; order?: "cheapest" | "most_expensive"; limit?: number;
+export async function rankFoodPrices({ region = "world", order = "cheapest", limit = 10, locale }: {
+  region?: string; order?: "cheapest" | "most_expensive"; limit?: number; locale?: string;
 }) {
   const raw = (await apiGet("/api/vanbasket/countries")) as { data?: RankedFood[] | Record<string, RankedFood> };
   const pricey = order === "most_expensive";
@@ -125,7 +139,7 @@ export async function rankFoodPrices({ region = "world", order = "cheapest", lim
     return { content: [{ type: "text" as const, text: `No food price data for region "${region}".` }], isError: true };
   }
   const table = rows
-    .map((c, i) => `  ${i + 1}. ${c.country_code}  ${String(c.country_name).padEnd(24)}  index ${c.vanbasket_index}`)
+    .map((c, i) => `  ${i + 1}. ${c.country_code}  ${countryName(c.country_code, c.country_name, locale).padEnd(24)}  index ${c.vanbasket_index}`)
     .join("\n");
   return {
     content: [{
@@ -138,11 +152,11 @@ export async function rankFoodPrices({ region = "world", order = "cheapest", lim
       region,
       rows: rows.map((c) => ({
         code: String(c.country_code).toUpperCase(),
-        name: c.country_name ?? c.country_code,
+        name: countryName(c.country_code, c.country_name, locale),
         index: c.vanbasket_index,
         pct_vs_world: typeof c.pct_vs_world === "number" ? c.pct_vs_world : null,
       })),
-      url: await foodPageUrl(),
+      url: await foodPageUrl(undefined, locale),
       source: SOURCE,
     },
   };
