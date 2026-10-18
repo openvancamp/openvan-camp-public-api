@@ -92,6 +92,11 @@ jobs:
               | jq -e --arg n "$name" --arg v "$version" '.servers[] | select(.server.name == $n and .server.version == $v)' > /dev/null; then
             echo "$name $version is already in the registry"; exit 0
           fi
+          # The registry checks the npm package, which shows up on npm a minute or two after publishing.
+          for i in $(seq 1 30); do
+            [ "$(npm view "${{ steps.pkg.outputs.name }}@$version" version 2>/dev/null)" = "$version" ] && break
+            sleep 10
+          done
           curl -sL https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz | tar xz mcp-publisher
           ./mcp-publisher login github-oidc
           ./mcp-publisher publish
