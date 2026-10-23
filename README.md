@@ -28,6 +28,8 @@ Free, no-auth API for vanlife data: fuel prices, route fuel cost, toll roads, ho
 
 **Gemini CLI extension:** install this repository with `gemini extensions install https://github.com/openvancamp/openvan-camp-public-api`. The root [`gemini-extension.json`](./gemini-extension.json) connects Gemini CLI directly to the hosted OpenVan.camp MCP server; no API key is required.
 
+**Plugin for coding agents (Claude Code, Codex):** the hosted MCP server plus two [agent skills](./skills) — [`openvan-travel`](./skills/openvan-travel/SKILL.md) answers trip questions with the right tools, [`openvan-api`](./skills/openvan-api/SKILL.md) writes code on this API with attribution, per-grade fuel units and caching done right. Claude Code: `/plugin install openvan-camp --marketplace openvancamp/openvan-camp-public-api` (or `/plugin marketplace add openvancamp/openvan-camp-public-api`, then `/plugin install openvan-camp@openvan-camp`). Codex: `codex plugin marketplace add openvancamp/openvan-camp-public-api`, then install OpenVan.camp from the Plugins Directory. Skills only, for any agent: `npx skills add openvancamp/openvan-camp-public-api`.
+
 **In your AI assistant, no code:** [Claude connector](https://claude.ai/directory/connectors/openvan-travel) · [ChatGPT app](https://chatgpt.com/plugins/plugin_asdk_app_69e458a2ea748191a71a07f7f673234c) · Telegram bot [@OpenVanCampBot](https://t.me/OpenVanCampBot) — the same data as interactive cards in the chat. [How to connect →](https://openvan.camp/en/assistant?utm_source=github&utm_medium=referral&utm_campaign=public-api-repo)
 
 ---

@@ -1,0 +1,20 @@
+{
+  "name": "openvan-camp",
+  "interface": {
+    "displayName": "OpenVan.camp"
+  },
+  "plugins": [
+    {
+      "name": "openvan-camp",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/openvancamp/openvan-camp-public-api.git"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Travel"
+    }
+  ]
+}

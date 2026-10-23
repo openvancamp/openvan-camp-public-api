@@ -1,0 +1,28 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "openvan-camp",
+  "version": "1.0.0",
+  "description": "Live road-trip and vanlife travel data for AI agents: whole-trip roadbooks, fuel prices in 170+ countries, toll roads, visa and vehicle-import rules, holidays, travel hazards, power plugs, customs, weather for van travel, food costs, currency, events and license plates. Skills for answering travel questions and for building on the free OpenVan.camp API, plus the hosted MCP server. No key.",
+  "author": {
+    "name": "OpenVan.camp",
+    "email": "hello@openvan.camp",
+    "url": "https://openvan.camp"
+  },
+  "homepage": "https://openvan.camp/en/developers",
+  "repository": "https://github.com/openvancamp/openvan-camp-public-api",
+  "license": "MIT",
+  "keywords": [
+    "vanlife",
+    "campervan",
+    "motorhome",
+    "rv",
+    "road-trip",
+    "travel",
+    "fuel-prices",
+    "toll-roads",
+    "visa",
+    "holidays",
+    "mcp",
+    "open-data"
+  ]
+}

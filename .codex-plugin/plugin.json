@@ -1,0 +1,51 @@
+{
+  "name": "openvan-camp",
+  "version": "1.0.0",
+  "description": "Live road-trip and vanlife travel data for AI agents: whole-trip roadbooks, fuel prices in 170+ countries, toll roads, visa and vehicle-import rules, holidays, travel hazards, power plugs, customs, weather for van travel, food costs, currency, events and license plates. Skills for answering travel questions and for building on the free OpenVan.camp API, plus the hosted MCP server. No key.",
+  "author": {
+    "name": "OpenVan.camp",
+    "email": "hello@openvan.camp",
+    "url": "https://openvan.camp"
+  },
+  "homepage": "https://openvan.camp/en/developers",
+  "repository": "https://github.com/openvancamp/openvan-camp-public-api",
+  "license": "MIT",
+  "keywords": [
+    "vanlife",
+    "campervan",
+    "motorhome",
+    "rv",
+    "road-trip",
+    "travel",
+    "fuel-prices",
+    "toll-roads",
+    "visa",
+    "holidays",
+    "mcp",
+    "open-data"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "OpenVan.camp",
+    "shortDescription": "Road-trip and vanlife travel data",
+    "longDescription": "Plan road trips and answer travel questions with live data for 200+ countries — fuel prices, tolls and vignettes, visa and vehicle-import rules, holidays, hazards, power plugs, customs, weather for van travel, food costs and currency — or build apps on the free OpenVan.camp API. Read-only, no key.",
+    "developerName": "OpenVan.camp",
+    "category": "Travel",
+    "capabilities": [
+      "Read"
+    ],
+    "websiteURL": "https://openvan.camp/en/developers",
+    "privacyPolicyURL": "https://openvan.camp/en/privacy",
+    "termsOfServiceURL": "https://openvan.camp/en/terms",
+    "defaultPrompt": [
+      "Plan a campervan trip from Munich to Venice with costs and border rules",
+      "Add a fuel price widget with OpenVan.camp data to this site",
+      "Where is diesel cheapest in Europe right now?"
+    ],
+    "brandColor": "#467187",
+    "composerIcon": "./assets/logo.svg",
+    "logo": "./assets/logo.svg",
+    "screenshots": []
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "openvan": {
+      "type": "http",
+      "url": "https://mcp.openvan.camp/mcp"
+    }
+  }
+}
