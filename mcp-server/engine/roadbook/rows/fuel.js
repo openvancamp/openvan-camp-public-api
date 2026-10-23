@@ -12,7 +12,7 @@ const FILL_TIP_PCT = 8;
  * на темп цен к дню проезда, совет «залить полный бак до границы».
  */
 export function fuelRow(ctx) {
-    const { ranges, i, r, priceEur, cons, roundK, payload, fuelKey, env, p, round, backInfo, tank, fmt } = ctx;
+    const { ranges, i, r, priceEur, cons, roundK, payload, fuelKey, env, p, round, backInfo, fmt } = ctx;
     const next = ranges[i + 1];
     const price = priceEur(r.cc);
     const nextPrice = next ? priceEur(next.cc) : null;
@@ -44,9 +44,8 @@ export function fuelRow(ctx) {
         : null;
     let tip = null;
     if (next && price && nextPrice && diff >= FILL_TIP_PCT) {
-        tip = { s: 'ok', t: tank
-            ? fmt.t('fuel_fill_here', { country: fmt.countryIn(next.cc), pct: diff, liters: Math.max(0, tank - 10) })
-            : fmt.t('fuel_fill_here_nol', { country: fmt.countryIn(next.cc), pct: diff }) };
+        // Остаток топлива неизвестен: точный объём дозаправки рассчитать нельзя.
+        tip = { s: 'ok', t: fmt.t('fuel_fill_here_nol', { country: fmt.countryIn(next.cc), pct: diff }) };
     } else if (next && price && nextPrice && diff <= -FILL_TIP_PCT) {
         tip = { s: 'warn', t: fmt.t('fuel_fill_min', { country: fmt.countryIn(next.cc), pct: -diff }) };
     }

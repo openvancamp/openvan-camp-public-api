@@ -26,6 +26,7 @@
 
 export const WINDOW_ROLLING = 'rolling';
 export const WINDOW_CALENDAR_YEAR = 'calendar_year';
+export const WINDOW_ENTRY_YEAR = 'entry_year';
 export const WINDOW_PER_ENTRY = 'per_entry';
 export const WINDOW_UNLIMITED = 'unlimited';
 
@@ -141,7 +142,17 @@ export function currentTrip(trips, on) {
  * Начало окна подсчёта для даты проверки. null — окно не ограничивает
  * (per_entry считается отдельно, unlimited не считается вовсе).
  */
-export function windowStartFor(checkDate, window, windowDays) {
+function firstKnownEntry(trips, on) {
+    const entries = trips.map(t => t.entry).filter(x => isValidDateString(x) && parseLocalDate(x) <= on).sort();
+    return entries.length ? parseLocalDate(entries[0]) : on;
+}
+
+export function windowStartFor(checkDate, window, windowDays, anchor = null) {
+    if (window === WINDOW_ENTRY_YEAR && anchor) {
+        const anniversary = year => new Date(year, anchor.getMonth(), Math.min(anchor.getDate(), new Date(year, anchor.getMonth() + 1, 0).getDate()));
+        const start = anniversary(checkDate.getFullYear());
+        return start <= checkDate ? start : anniversary(checkDate.getFullYear() - 1);
+    }
     if (window === WINDOW_CALENDAR_YEAR) {
         return new Date(checkDate.getFullYear(), 0, 1);
     }
@@ -178,7 +189,7 @@ export function usedDays(trips, checkDate, window, windowDays) {
         return ongoing ? expandTrip(ongoing.entry, formatLocalDate(checkDate), checkDate) : used;
     }
 
-    const windowStart = windowStartFor(checkDate, window, windowDays);
+    const windowStart = windowStartFor(checkDate, window, windowDays, firstKnownEntry(trips, checkDate));
 
     trips.forEach(trip => {
         expandTrip(trip.entry, trip.exit, checkDate).forEach(day => {
@@ -204,7 +215,7 @@ export function usedDaysBefore(trips, entryDate, window, windowDays, excludeInde
         return used;
     }
 
-    const windowStart = windowStartFor(entryDate, window, windowDays);
+    const windowStart = windowStartFor(entryDate, window, windowDays, firstKnownEntry(trips, entryDate));
 
     trips.forEach((trip, index) => {
         if (index === excludeIndex) {
@@ -272,11 +283,11 @@ export function simulateExit(trips, on, rule) {
 
         let totalOk = true;
 
-        if (maxTotal !== null && (window === WINDOW_ROLLING || window === WINDOW_CALENDAR_YEAR)) {
+        if (maxTotal !== null && (window === WINDOW_ROLLING || window === WINDOW_CALENDAR_YEAR || window === WINDOW_ENTRY_YEAR)) {
             const occupied = new Set(other);
             expandTrip(formatLocalDate(entry), formatLocalDate(day), day).forEach(d => occupied.add(d));
 
-            const start = windowStartFor(day, window, windowDays);
+            const start = windowStartFor(day, window, windowDays, firstKnownEntry(trips, on));
             const end = window === WINDOW_CALENDAR_YEAR ? new Date(day.getFullYear(), 11, 31) : day;
             let inWindow = 0;
             occupied.forEach(d => {
@@ -311,7 +322,7 @@ export function simulateExit(trips, on, rule) {
             const occupied = new Set(other);
             expandTrip(formatLocalDate(entry), formatLocalDate(lastOk), lastOk).forEach(d => occupied.add(d));
 
-            const start = windowStartFor(lastOk, window, windowDays);
+            const start = windowStartFor(lastOk, window, windowDays, firstKnownEntry(trips, on));
             let inWindow = 0;
             occupied.forEach(d => {
                 const date = parseLocalDate(d);
@@ -342,6 +353,12 @@ export function simulateExit(trips, on, rule) {
  * ПОЛНЫЙ лимит (это fullResetDate ниже).
  */
 export function windowResetDate(trips, on, window, windowDays) {
+    if (window === WINDOW_ENTRY_YEAR) {
+        const anchor = firstKnownEntry(trips, on);
+        const start = windowStartFor(on, window, windowDays, anchor);
+        const year = start.getFullYear() + 1;
+        return formatLocalDate(new Date(year, anchor.getMonth(), Math.min(anchor.getDate(), new Date(year, anchor.getMonth() + 1, 0).getDate())));
+    }
     if (window === WINDOW_CALENDAR_YEAR) {
         return formatLocalDate(new Date(on.getFullYear() + 1, 0, 1));
     }
@@ -465,6 +482,10 @@ export function vehicleRuleToTrack(vehicle) {
  * потребитель обязан помнить про проверку сам.
  */
 export function fullResetDate(window, windowDays, checkDate, latestExit) {
+    // Без даты первого въезда дата годовщины неизвестна; последний выезд её не заменяет.
+    if (window === WINDOW_ENTRY_YEAR) {
+        return null;
+    }
     if (window === WINDOW_UNLIMITED) {
         return null;
     }

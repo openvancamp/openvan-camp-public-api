@@ -2,6 +2,11 @@
 
 ## 2026-10-23
 
+### Fixed — MCP server v0.9.7
+- The npm package now plans trips with the same roadbook engine as the hosted server: visa counting windows and
+  dated entry rules, toll and vignette fixes, speed rules and disclosed coverage gaps (engine synced from openvan.camp).
+- Dependencies: MCP SDK 1.32 on the hosted server too; `npm audit` reports 0 issues.
+
 ### Changed — plugin v1.0.2
 - `openvan-travel`: source links are offered where they help the user, instead of an instruction to end every answer with one.
 

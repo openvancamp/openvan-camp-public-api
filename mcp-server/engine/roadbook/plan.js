@@ -548,7 +548,7 @@ export function buildPlan(payload, inputs, visa, env) {
     /** Срок одного паспорта в стране: ответ движка по прошлым + запланированным заездам. */
     const personTrack = (cc, passport, p, residence = null) => {
         const leg = legFor(cc);
-        const row = leg?.rows?.find(x => (x.passports || []).includes(passport));
+        let row = leg?.rows?.find(x => (x.passports || []).includes(passport));
         // Паспорт сильнее ВНЖ: гражданину (своя страна, свобода передвижения в ЕС) ВНЖ
         // ничего не добавляет. Иначе австриец с ВНЖ Испании ехал по Шенгену «без визы по ВНЖ».
         if (row && ['citizen', 'freedom'].includes(row.visa_type)) {
@@ -557,6 +557,16 @@ export function buildPlan(payload, inputs, visa, env) {
         const byResidence = residenceTrack(cc, residence, p);
         if (byResidence) {
             return byResidence;
+        }
+        const dated = (payload.visaChanges || []).find(change => change.place === cc && change.passports.includes(passport));
+        if (dated) {
+            const entries = plannedTrips[cc] || [];
+            if (!start || entries.some(visit => visit.entry >= dated.valid_from)) {
+                return { kind: 'manual', row: { ...row, note: dated.note, source_url: dated.source_url } };
+            }
+            if (dated.before) {
+                row = { ...row, ...dated.before, days_label: fmt.days(dated.before.days), note: dated.note, source_url: dated.source_url };
+            }
         }
         if (!leg || !row) {
             return { kind: 'none' };
@@ -569,6 +579,9 @@ export function buildPlan(payload, inputs, visa, env) {
         }
         if (NO_COUNTER_MODES.includes(row.mode)) {
             return { kind: 'visa', row };
+        }
+        if (row.confidence === 'low' || row.window === 'entry_year') {
+            return { kind: 'manual', row };
         }
         const rule = ruleFromRow(row);
         if (rule.window === WINDOW_UNLIMITED || (rule.maxContinuous === null && rule.maxTotal === null)) {
@@ -608,7 +621,7 @@ export function buildPlan(payload, inputs, visa, env) {
         };
     };
 
-    const SEV = { restricted: 6, none: 5, visa: 4, free: 3, unlimited: 1, residence_schengen: 0, residence: 0, home: 0 };
+    const SEV = { restricted: 6, none: 5, manual: 4.5, visa: 4, free: 3, unlimited: 1, residence_schengen: 0, residence: 0, home: 0 };
 
     // ---------- Счётчик Шенгена ----------
     let schengen = null;
@@ -654,12 +667,32 @@ export function buildPlan(payload, inputs, visa, env) {
 
         return x?.amount_local !== null && x?.amount_local !== undefined && rate ? x.amount_local / rate : x?.amount_eur ?? null;
     };
-    const tollItems = (route.tolls?.items || []).map(x => ({
+    // Коридорная оценка частичной разметки не доказывает плату на объезде.
+    const uncertainBypass = (route.tolls?.items || []).filter(x => route.avoid_tolls
+        && (route.road?.partial !== false || route.tolls?.partial === true)
+        && ['per_km', 'section'].includes(x.type));
+    const tollItems = (route.tolls?.items || []).filter(x => !uncertainBypass.includes(x)
+        // Молдавская виньетка применяется только к иностранной регистрации (vinieta.gov.md).
+        && !(x.type === 'vignette' && x.country === 'MD' && inputs.plates === 'MD')).map(x => ({
         ...x,
         amount_eur: tollEur(x),
         meta: x.meta?.options ? { ...x.meta, options: x.meta.options.map(o => ({ ...o, amount_eur: tollEur(o) })) } : x.meta,
     }));
-    const unknownToll = new Set(route.tolls?.unknown_countries || []);
+    // Отсутствие ответа тарифного сервиса — неизвестная стоимость, не бесплатная дорога.
+    // Старый API возвращал null и при проверенном нуле: сохраняем этот отдельный случай.
+    const checkedFreeRoad = route.road?.partial === false && route.road?.toll_km === 0
+        && Array.isArray(route.road?.toll_by_country) && route.road.toll_by_country.length === 0;
+    const unknownToll = new Set(Array.isArray(route.tolls?.items) || checkedFreeRoad
+        ? route.tolls?.unknown_countries || []
+        : ranges.map(r => r.cc));
+    // Visiting every country with a probe does not mean every segment was checked.
+    if ((route.road?.partial === true || route.tolls?.partial === true) && !route.tolls?.unknown_countries?.length) {
+        ranges.forEach(r => unknownToll.add(r.cc));
+    }
+    uncertainBypass.forEach(x => unknownToll.add(x.country));
+    if (route.avoid_tolls && !Number.isFinite(route.road?.toll_km)) {
+        ranges.forEach(r => unknownToll.add(r.cc));
+    }
     const ferryItems = (route.borders || []).map((border) => {
         if (!border.ferry) {
             return null;
@@ -717,6 +750,8 @@ export function buildPlan(payload, inputs, visa, env) {
         return leg?.vehicle?.carnet_required === true && !leg.plate_ban && !(leg.car_home ?? leg.home) && inputs.plates !== cc;
     };
     /** Что ждёт на границе при въезде из `from` в `to`; back — это пересечение на обратной дороге. */
+    // Для BY есть исключения, но профиль не содержит владельца/цели ввоза: решение неизвестно.
+    const conditionalPlate = leg => inputs.plates === 'BY' && !!leg?.plate_ban;
     const borderChecks = (from, to, i, back = false, ferry = false) => {
         const fromZone = ferry && SCHENGEN_MEMBERS.has(from) ? 'SCHENGEN' : zoneOf(from);
         const toZone = ferry && SCHENGEN_MEMBERS.has(to) ? 'SCHENGEN' : zoneOf(to);
@@ -729,8 +764,8 @@ export function buildPlan(payload, inputs, visa, env) {
             checks.push({ s: 'warn', t: fmt.t('check_passport_control') });
         }
         const toLeg = legFor(to);
-        if (toLeg?.plate_ban) {
-            checks.push({ s: 'bad', t: fmt.t('check_plate_ban') });
+        if (toLeg?.plate_ban && !innerSchengen(from, to)) {
+            checks.push({ s: conditionalPlate(toLeg) ? 'warn' : 'bad', t: fmt.t(conditionalPlate(toLeg) ? 'car_plate_conditional' : 'check_plate_ban') });
         }
         const green = toLeg?.green_card_for_plate;
         if (green === 'border_insurance' && !toLeg?.plate_ban) {
@@ -743,7 +778,7 @@ export function buildPlan(payload, inputs, visa, env) {
                 checks.push({ s: 'warn', t: fmt.t(back || insuredBefore ? 'check_insurance_valid' : 'check_buy_insurance') });
             }
         }
-        const vgn = !route.avoid_tolls && tollsFor(to).find(x => x.type === 'vignette');
+        const vgn = tollsFor(to).find(x => x.type === 'vignette');
         if (vgn) {
             checks.push({ s: 'toll', t: fmt.t(back ? 'check_vignette_valid' : 'check_vignette_before', { country: fmt.countryName(to) }) });
         }
@@ -891,13 +926,15 @@ export function buildPlan(payload, inputs, visa, env) {
         } else {
             const t = worst.t;
             const perPerson = travelers.length > 1
-                ? res.map(x => `${fmt.countryName(x.passport)}: ${fmt.t('visa_short_' + x.t.kind, { days: x.t.row?.days ?? '' })}`).join(' · ')
+                ? res.map(x => `${fmt.countryName(x.passport)}: ${x.t.kind === 'manual' ? fmt.t('visa_manual') : fmt.t('visa_short_' + x.t.kind, { days: x.t.row?.days ?? '' })}`).join(' · ')
                 : null;
             const lines = [];
             if (t.kind === 'restricted') {
                 vrow = { key: 'visa', s: 'bad', big: fmt.t('visa_restricted'), restricted: true, lines: [t.row.note || fmt.t('visa_restricted_text')] };
             } else if (t.kind === 'visa') {
                 vrow = { key: 'visa', s: 'warn', big: t.row.mode_label || fmt.t('visa_needed'), lines: [t.row.note].filter(Boolean) };
+            } else if (t.kind === 'manual') {
+                vrow = { key: 'visa', s: 'warn', manual: true, big: fmt.t('visa_manual'), lines: [t.row.note].filter(Boolean) };
             } else if (t.kind === 'residence') {
                 vrow = { key: 'visa', s: 'ok', free: true, big: fmt.t('visa_residence'), lines: [fmt.t('visa_residence_text')] };
             } else if (t.kind === 'residence_schengen') {
@@ -927,10 +964,13 @@ export function buildPlan(payload, inputs, visa, env) {
                     big: t.row.days_label ? fmt.t('visa_days_free', { days: t.row.days_label }) : t.row.mode_label,
                     lines: lines.filter(Boolean),
                     deadline: start && t.mustExit ? fmt.t('exit_by', { date: fmt.date(t.mustExit) }) : null,
-                    until: t.mustExit, over: t.over, margin: t.margin, allowed: t.allowed, days: plannedDays,
+                    until: start ? t.mustExit : null, over: t.over, margin: t.margin, allowed: t.allowed, days: plannedDays,
                     needDate: !start,
                 };
             }
+            // Условия относятся и к безвизовому въезду, включая остальных пассажиров.
+            vrow.entryNotes = [...new Set(res.filter(x => !['home', 'residence'].includes(x.t.kind)).map(x => x.t.row?.note).filter(Boolean))];
+            vrow.lines = [...new Set([...vrow.lines, ...vrow.entryNotes])];
             if (perPerson) {
                 vrow.lines.push(perPerson);
             }
@@ -947,10 +987,15 @@ export function buildPlan(payload, inputs, visa, env) {
         const leg = legFor(r.cc);
         // «Дома» в ответе сервера — про человека; у машины свой признак (car_home): гражданин
         // ЕС на машине с номерами не ЕС не «у себя» — ей положены правило ввоза и запреты.
-        const carHome = leg ? (leg.car_home ?? leg.home) : false;
+        const carHome = leg?.car_home === true;
         let car;
-        if (!inputs.plates && !leg) {
+        if (!inputs.plates) {
             car = { key: 'car', s: 'none', hint: true, lines: [fmt.t('car_pick_plates')] };
+        } else if (conditionalPlate(leg)) {
+            car = { key: 'car', s: 'warn', conditional: true, big: fmt.t('car_plate_conditional'),
+                lines: [fmt.t('car_plate_conditional_text')], source: r.cc === 'PL'
+                    ? 'https://www.gov.pl/web/kas/nowe-zasady-przywozu-samochodow-osobowych-zarejestrowanych-na-bialorusi'
+                    : leg.plate_ban.source_url, basis: leg.plate_ban.legal_basis };
         } else if (leg?.plate_ban) {
             car = { key: 'car', s: 'bad', big: fmt.t('car_banned'), banned: true, lines: [leg.plate_ban.label], source: leg.plate_ban.source_url, basis: leg.plate_ban.legal_basis };
         } else if (carHome || (inputs.plates && inputs.plates === r.cc)) {
@@ -999,7 +1044,7 @@ export function buildPlan(payload, inputs, visa, env) {
                     };
                 });
                 const tight = tracks.reduce((a, b) => (b.margin < a.margin ? b : a));
-                car.until = tight.mustExit;
+                car.until = start ? tight.mustExit : null;
                 car.over = tracks.some(x => x.over);
                 car.margin = tight.margin;
                 car.allowed = tight.allowed;
@@ -1027,6 +1072,11 @@ export function buildPlan(payload, inputs, visa, env) {
         // разрешение на машину, местная страховка. Спокойный зелёный у машины им противоречит.
         if (legFor(r.cc)?.warnings?.length && car.s === 'ok' && !car.free) {
             car.s = 'warn';
+        }
+        if (r.cc === 'TR' && inputs.plates !== 'TR') {
+            car.lines.push(fmt.t('car_turkey_eligibility'));
+            car.s = car.s === 'bad' ? 'bad' : 'warn';
+            car.source = 'https://www.mfa.gov.tr/araclarla-ilgili-hususlar.en.mfa';
         }
         rows.push(car);
 
@@ -1064,6 +1114,7 @@ export function buildPlan(payload, inputs, visa, env) {
         const plate = payload.plateCatalog?.[r.cc] || null;
         rows.push({
             key: 'plates',
+            cc: r.cc,
             s: plate ? 'ok' : 'none',
             plate: plate?.p || null,
             intl: plate?.i || null,
@@ -1421,9 +1472,6 @@ export function buildPlan(payload, inputs, visa, env) {
     // ---------- Лента: платные полосы и объекты ----------
     const tollBands = [];
     ranges.forEach((r, i) => {
-        if (route.avoid_tolls) {
-            return;
-        }
         const items = tollsForVisit(r.cc, i);
         if (items.some(x => x.type === 'vignette')) {
             tollBands.push({ left: P(r.from_km), width: P(r.km), vignette: true, cc: r.cc });
@@ -1443,6 +1491,7 @@ export function buildPlan(payload, inputs, visa, env) {
     let alert = null;
     const banned = cards.find(c => c.rows[1].banned);
     const restricted = cards.find(c => c.rows[0].restricted);
+    const conditionalCar = cards.find(c => c.rows[1].conditional);
     const overCard = cards.find(c => c.pinch?.over);
     // Двусторонний пункт пропуска, через который человека с этими паспортами не пустят (Росгранстрой).
     const closedPost = borders.flatMap(b => [b, b.back].filter(Boolean).map(x => ({ b, c: (x.checks || []).find(k => k.id === 'bilateral' && k.s === 'bad') })))
@@ -1457,6 +1506,8 @@ export function buildPlan(payload, inputs, visa, env) {
         alert = { s: 'bad', key: 'schengen', title: fmt.t('alert_schengen_title', { total: schengen.total }), text: fmt.t('alert_schengen_text', { extra: fmt.days(schengen.total - 90) }) };
     } else if (overCard) {
         alert = { s: 'bad', key: 'over', title: fmt.t('alert_over_title', { country: overCard.name }), text: overCard.pinch.text, cc: overCard.cc };
+    } else if (conditionalCar) {
+        alert = { s: 'warn', key: 'plate-conditions', title: fmt.t('car_plate_conditional'), text: conditionalCar.rows[1].lines[0], cc: conditionalCar.cc };
     } else if (!travelers.length) {
         alert = { s: 'none', key: 'passport', soft: true, title: fmt.t('alert_passport_title'), text: fmt.t('alert_passport_text') };
     } else if (cards.some(c => c.rows[0].nodataPassport)) {
@@ -1504,15 +1555,35 @@ export function buildPlan(payload, inputs, visa, env) {
     // Пункт — только там, где он нужен: людям — в стране не их паспорта, машине — не её номеров.
     // Поездка по своей стране с её номерами не требует загранпаспорта, международных прав,
     // доверенности и документов на пересечение границы (Тверь — Новгород на RU/RU, 09.10.2026).
-    // Номера не выбраны — машина считается из страны паспорта, если паспорт у всех один.
+    // Гражданство не определяет страну регистрации машины.
     const home = travelers.length && travelers.every(t => t === ranges[0].cc) ? ranges[0].cc : null;
     const uniq = arr => [...new Set(arr)];
     const allCc = uniq(ranges.map(r => r.cc));
     const abroad = travelers.length ? uniq(ranges.filter(r => travelers.some(t => t !== r.cc)).map(r => r.cc)) : allCc;
-    const plateCc = inputs.plates || (travelers.length && travelers.every(t => t === travelers[0]) ? travelers[0] : null);
+    const plateCc = inputs.plates || null;
     const carAbroad = plateCc ? allCc.filter(cc => cc !== plateCc) : allCc;
     const groups = [];
     const docs = [];
+    // Привязку к дорожной сети не выдаём за проезд до выбранной точки.
+    const line = route.preview || [];
+    const requested = route.waypoints || [];
+    if (line.length > 1 && requested.length > 1) {
+        const distanceKm = (a, b) => {
+            const rad = Math.PI / 180;
+            const h = Math.sin((b[1] - a[1]) * rad / 2) ** 2
+                + Math.cos(a[1] * rad) * Math.cos(b[1] * rad) * Math.sin((b[0] - a[0]) * rad / 2) ** 2;
+            return 6371 * 2 * Math.asin(Math.sqrt(Math.min(1, h)));
+        };
+        [[0, 0, ranges[0].cc], [requested.length - 1, line.length - 1, ranges[ranges.length - 1].cc]].forEach(([a, b, cc]) => {
+            const km = distanceKm(requested[a], line[b]);
+            if (km >= 0.5) {
+                docs.push({ id: `endpoint-${a}`, s: 'warn', c: [cc], t: fmt.t('route_endpoint_gap', {
+                    name: route.points?.[a] || `${requested[a][1]}, ${requested[a][0]}`,
+                    km: fmt.num(Math.round(km * 100) / 100),
+                }) });
+            }
+        });
+    }
     if (abroad.length) {
         docs.push(
             { id: 'passport', t: fmt.t('check_doc_passport'), c: abroad },
@@ -1540,13 +1611,24 @@ export function buildPlan(payload, inputs, visa, env) {
     }
     // Шенген — одна виза на всю зону: пять задач «Виза: Германия», «Виза: Дания»… читались как
     // пять отдельных разрешений (фактчек 01.10.2026). Страны зоны — одной строкой.
-    const visaCards = cards.filter(c => c.rows[0].big && c.rows[0].s === 'warn' && !c.rows[0].until);
+    const visaCards = cards.filter(c => c.rows[0].big && c.rows[0].s === 'warn' && !c.rows[0].until && !c.rows[0].manual);
     const schengenVisa = visaCards.filter(c => SCHENGEN_MEMBERS.has(c.cc));
     visaCards.filter(c => !SCHENGEN_MEMBERS.has(c.cc)).forEach((c) => {
         docs.unshift({ id: `visa-${c.cc}`, t: fmt.t('check_doc_visa', { country: c.name }), c: [c.cc], s: 'warn' });
     });
     if (schengenVisa.length) {
         docs.unshift({ id: 'visa-schengen', t: fmt.t('check_doc_visa', { country: fmt.t('plan_zone_schengen') }), c: uniq(schengenVisa.map(c => c.cc)), s: 'warn' });
+    }
+    // Не теряем обязательные условия безвиза в подготовке к поездке.
+    for (const cc of allCc) {
+        const notes = uniq(cards.filter(c => c.cc === cc).flatMap(c => c.rows[0].entryNotes || []));
+        notes.forEach((note, n) => docs.push({ id: `entry-note-${cc}-${n}`, t: note, c: [cc], s: 'warn' }));
+    }
+    if (allCc.includes('TR') && inputs.plates !== 'TR') {
+        docs.push({ id: 'turkey-vehicle', t: fmt.t('car_turkey_eligibility'), c: ['TR'], s: 'warn' });
+    }
+    if (conditionalCar) {
+        docs.push({ id: 'plate-conditions', t: fmt.t('car_plate_conditional_text'), c: uniq(cards.filter(c => c.rows[1].conditional).map(c => c.cc)), s: 'warn' });
     }
     if (inputs.kids && abroad.length) {
         docs.push({ id: 'kids', t: fmt.t('check_doc_kids'), c: abroad, s: 'warn' });
@@ -1729,7 +1811,7 @@ export function buildPlan(payload, inputs, visa, env) {
     const totals = {
         fuel: sum('fuel'), toll: sum('toll'), vg: sum('vg'), ferry: sum('ferry'), fees: sum('fees'), total: sum('total'), fuelUnknown: budget.some(b => b.fuelUnknown),
         // Страны, где про платные дороги данных нет: в итог они вошли нулём — бюджет говорит об этом.
-        roadsUnknown: cards.filter(c => c.rows.find(x => x.key === 'roads')?.mode === 'unknown').map(c => c.name),
+        roadsUnknown: [...new Set(cards.filter(c => unknownToll.has(c.cc) || c.rows.find(x => x.key === 'roads')?.mode === 'unknown').map(c => c.name))],
     };
 
     // ---------- Ленты: дорога туда и дорога обратно ----------

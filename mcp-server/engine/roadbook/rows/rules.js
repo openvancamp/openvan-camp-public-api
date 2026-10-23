@@ -41,21 +41,21 @@ export function rulesRow(rules, inputs, fmt) {
     let big = null;
     let varies = false;
     if (set) {
-        const parts = ['urban', 'rural', 'expressway', 'motorway'].map((k) => {
+        const parts = ['urban', 'rural', 'expressway', 'expressway_single', 'expressway_dual', 'motorway'].map((k) => {
             const x = top(set[k]);
             if (!x) {
                 return null;
             }
             varies ||= x.varies;
 
-            return fmt.t(`rules_speed_${k}`, { speed: x.v });
+            return fmt.t(`rules_speed_${k}`, { speed: set[`${k}_recommended`] ? fmt.t('rules_recommended', { speed: x.v }) : x.v });
         }).filter(Boolean);
         if (parts.length) {
             lines.push(parts.join(' · '));
         }
         const motorway = top(set.motorway);
         if (motorway) {
-            big = fmt.t('rules_big', { speed: motorway.v });
+            big = fmt.t(set.motorway_recommended ? 'rules_recommended' : 'rules_big', { speed: motorway.v });
         }
     } else if (kind === 'heavy' && (sp.car || sp.motorhome_light)) {
         lines.push(fmt.t('rules_heavy_none'));

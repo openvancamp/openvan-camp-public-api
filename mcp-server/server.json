@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.openvancamp/openvan-travel",
   "description": "Vanlife & RV data: roadbooks, fuel, tolls, visas, holidays, hazards, weather, currency. openvan.camp",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "repository": {
     "url": "https://github.com/openvancamp/openvan-camp-public-api",
     "source": "github"
@@ -12,7 +12,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@openvancamp/mcp-server",
-      "version": "0.9.6",
+      "version": "0.9.7",
       "transport": {
         "type": "stdio"
       }

@@ -23,7 +23,8 @@ export function roadsRow(ctx) {
     const { route, r, i, p, round, roundK, payload, fmt, tollsForVisit, unknownToll, span } = ctx;
     // Паром внутри страны (Крит, пролив Кука) — не платная дорога: объезд платных его не убирает.
     const isFerry = x => x.meta?.kind === 'ferry';
-    const items = route.avoid_tolls ? tollsForVisit(r.cc, i).filter(isFerry) : tollsForVisit(r.cc, i);
+    // Объезд платных не отменяет виньетки всей сети и неизбежные сборы.
+    const items = tollsForVisit(r.cc, i);
     const vignette = items.find(x => x.type === 'vignette');
     const paidItems = items.filter(x => x.type !== 'vignette');
     const tollSum = paidItems.reduce((sum, x) => sum + (x.amount_eur || 0), 0) * roundK;
@@ -110,7 +111,7 @@ export function roadsRow(ctx) {
     return {
         key: 'roads',
         s: mode === 'free' ? 'ok' : mode === 'unknown' ? 'none' : 'toll',
-        mode, lines: vgLines, items: roadItems, eachWay: round && roadItems.length > 0, checked: null, vignette: vg, tollSum, ferrySum,
+        mode, lines: [...vgLines, ...(route.avoid_tolls && paidItems.some(x => !isFerry(x)) ? [fmt.t('road_avoid_remaining')] : [])], items: roadItems, eachWay: round && roadItems.length > 0, checked: null, vignette: vg, tollSum, ferrySum,
         big: mode === 'unknown' ? fmt.t('no_data') : tollSum ? `≈ ${fmt.money(tollSum)}${round ? ' ' + fmt.t('both_ways') : ''}` : vg ? fmt.t(vg.again ? 'road_vignette_big_two' : 'road_vignette_big', { price: fmt.money(vg.eur) }) : fmt.t('road_free'),
         avoid: !!route.avoid_tolls,
     };;

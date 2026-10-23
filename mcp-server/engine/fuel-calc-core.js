@@ -776,7 +776,12 @@ export async function searchCity(query, opts) {
  * @param {number|null} crowKm  Расстояние по прямой в км (только для too_far) — для подстановки {km}
  * @returns {string}            Готовый локализованный текст или пустую строку если t пустой
  */
-function routeErrorText(backendCode, t, crowKm) {
+function routeErrorText(backendCode, t, crowKm, data) {
+    // Сервер сам разобрал, какая точка стоит не там (RouteFailureDiagnosis), и прислал
+    // готовый текст на языке страницы — он точнее общего текста по коду.
+    if (data && typeof data.message === 'string' && data.message) {
+        return data.message;
+    }
     const T = t || {};
     const get = (key) => T[key] || '';
     switch (backendCode) {
