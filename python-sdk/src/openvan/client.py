@@ -8,7 +8,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 DEFAULT_BASE_URL = "https://openvan.camp"
 

@@ -100,8 +100,8 @@ class FuelResource {
 
   /**
    * Cheapest countries by fuel type, sorted cheapest-first in EUR per liter.
-   * Each grade is converted with its own currency (`currencies`), gallon prices are
-   * normalized to liters, and countries whose currency has no rate are left out.
+   * Each grade is converted with its own currency (`currencies`) and unit (`units`):
+   * gallon prices are normalized to liters, and countries whose currency has no rate are left out.
    */
   async cheapest(
     fuelType: "gasoline" | "diesel" | "lpg" | "cng" = "diesel",
@@ -122,7 +122,8 @@ class FuelResource {
       const rate = currency === "EUR" ? 1 : rates[currency];
       if (!rate) return NaN;
       const eur = p / rate;
-      return c.unit.toLowerCase().includes("gal") ? eur / LITERS_PER_GALLON : eur;
+      const unit = c.units?.[fuelType] ?? c.unit;
+      return unit.toLowerCase().includes("gal") ? eur / LITERS_PER_GALLON : eur;
     };
 
     return Object.values(prices)

@@ -68,8 +68,8 @@ class Fuel(_Resource):
     def cheapest(self, fuel_type: str = "diesel", limit: int = 10) -> List[JSON]:
         """Cheapest countries for a fuel type, in EUR per liter, cheapest first.
 
-        Each grade is converted with its own currency (``currencies``), gallon prices are
-        normalized to liters, and countries whose currency has no rate are left out.
+        Each grade is converted with its own currency (``currencies``) and unit (``units``):
+        gallon prices are normalized to liters, and countries whose currency has no rate are left out.
         """
         prices = self.prices()
         try:
@@ -86,7 +86,8 @@ class Fuel(_Resource):
             if not rate:
                 return math.nan
             eur = price / rate
-            return eur / LITERS_PER_GALLON if "gal" in str(country.get("unit", "")).lower() else eur
+            unit = (country.get("units") or {}).get(fuel_type) or country.get("unit", "")
+            return eur / LITERS_PER_GALLON if "gal" in str(unit).lower() else eur
 
         ranked = [(eur_per_liter(c), c) for c in prices.values()]
         ranked = [x for x in ranked if not math.isnan(x[0])]

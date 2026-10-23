@@ -2,6 +2,11 @@
 
 ## 2026-10-23
 
+### Fixed — JS SDK v1.2.1, Python SDK v0.1.1
+- `fuel.cheapest()` normalised gallons by the country's `unit` instead of the grade's `units[grade]`. Colombia's record
+  says liters while diesel and petrol are sold per gallon, so Colombia ranked 170th of 171 for cheap diesel instead of 18th.
+- JS types: `FuelCountry.units`.
+
 ### Fixed — MCP server v0.9.7
 - The npm package now plans trips with the same roadbook engine as the hosted server: visa counting windows and
   dated entry rules, toll and vignette fixes, speed rules and disclosed coverage gaps (engine synced from openvan.camp).

@@ -79,6 +79,19 @@ class OpenVanTest(unittest.TestCase):
         # XX has no rate and is left out instead of being compared as EUR.
         self.assertEqual([c["country_code"] for c in ranked], ["VE", "US", "DE"])
 
+    def test_cheapest_uses_the_unit_of_each_grade(self):
+        # Colombia: the country record says liters, but diesel is sold per gallon.
+        fuel = {"data": {
+            "DE": {"country_code": "DE", "currency": "EUR", "unit": "liter", "prices": {"diesel": 1.70}},
+            "CO": {"country_code": "CO", "currency": "COP", "unit": "liter",
+                   "units": {"diesel": "gallon"}, "prices": {"diesel": 11219.5}},
+        }}
+        fake, _ = respond({"/api/fuel/prices": fuel, "/api/currency/rates": {"rates": {"EUR": 1, "COP": 4400.0}}})
+        with mock.patch("openvan.client.urlopen", fake):
+            ranked = OpenVan().fuel.cheapest("diesel")
+        # 11219.5 COP / 4400 = 2.55 € per gallon = 0.67 €/l, cheaper than DE at 1.70 €/l.
+        self.assertEqual([c["country_code"] for c in ranked], ["CO", "DE"])
+
     def test_weather_score_calls_country_endpoint(self):
         fake, calls = respond({"/api/vansky/weather/FR": {"data": {"code": "FR", "van_score": 89}}})
         with mock.patch("openvan.client.urlopen", fake):

@@ -29,8 +29,13 @@ export interface FuelCountry {
    * (Venezuela: diesel in USD, gasoline in VES). Always prefer it over `currency`.
    */
   currencies?: Record<string, string>;
-  /** "liter" or "gallon" */
+  /** Unit of the country record: "liter" or "gallon". The unit of a grade can differ — see `units`. */
   unit: string;
+  /**
+   * Unit of each grade (Colombia: diesel and gasoline per "gallon" while `unit` is "liter";
+   * CNG per "m3" or "kg"). Always prefer it over `unit`.
+   */
+  units?: Record<string, string>;
   prices: FuelPrices;
   fetched_at?: string | null;
   sources?: string[];
