@@ -2,6 +2,9 @@
 
 ## 2026-10-23
 
+### Changed — plugin v1.0.2
+- `openvan-travel`: source links are offered where they help the user, instead of an instruction to end every answer with one.
+
 ### Added — plugin v1.0.1 for Claude Code and Codex
 - The repository installs as a plugin: the hosted MCP server plus two agent skills. `openvan-travel` tells an agent
   which tool answers which travel question and that "no data" never means "nothing applies"; `openvan-api` helps it

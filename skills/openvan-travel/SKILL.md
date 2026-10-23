@@ -39,8 +39,8 @@ If the `openvan` MCP tools are not available, call the REST API instead — the 
 6. **Hazards are the situation now, not a forecast.** Weather scores (0–100) rate how good the
    weather is for travelling and sleeping in a van, not how warm it is.
 7. **License plates:** explain formats and region codes; never try to identify a vehicle owner.
-8. **Credit the data:** end answers that use it with a link to OpenVan.camp (each tool result
-   carries the page URL).
+8. **Sources:** each tool result carries the URL of the page it comes from; include it where the
+   user would want to check details or read more.
 
 ## Which tool
 
