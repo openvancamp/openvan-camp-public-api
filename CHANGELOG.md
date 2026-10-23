@@ -2,13 +2,14 @@
 
 ## 2026-10-23
 
-### Added — plugin v1.0.0 for Claude Code and Codex
+### Added — plugin v1.0.1 for Claude Code and Codex
 - The repository installs as a plugin: the hosted MCP server plus two agent skills. `openvan-travel` tells an agent
   which tool answers which travel question and that "no data" never means "nothing applies"; `openvan-api` helps it
   write code on this API — visible attribution, `source`, per-grade fuel units and currencies, caching, async roadbooks.
 - Claude Code: `/plugin install openvan-camp --marketplace openvancamp/openvan-camp-public-api`. Codex:
   `codex plugin marketplace add openvancamp/openvan-camp-public-api`. Skills only: `npx skills add openvancamp/openvan-camp-public-api`.
 - CI validates the skills against the Agent Skills spec and keeps the plugin manifests on one version.
+- Codex reads the MCP server from the root `mcp.json` (`streamable-http`); `.mcp.json` stays for Claude Code.
 
 ## 2026-10-18
 
