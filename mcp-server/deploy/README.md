@@ -5,7 +5,7 @@ Public Streamable HTTP endpoint for the OpenVan MCP Server.
 Layout on production:
 
 ```
-DNS: mcp.openvan.camp  →  167.86.110.190 (Contabo)
+DNS: mcp.openvan.camp  →  95.111.242.243 (Contabo)
                             ↓
                           nginx :443 (TLS, Let's Encrypt)
                             ↓
@@ -47,14 +47,21 @@ curl -s -X POST https://mcp.openvan.camp/mcp \
 
 ## Updating the server
 
+The service runs straight from the private site repo (`/home/vanlife/VanLife-Aggregator-laravel/mcp-server`)
+and reads the roadbook engine from the site's `resources/js`. The `vanlife` user cannot `systemctl restart`;
+the unit has `Restart=on-failure`, so killing the process restarts it.
+
 ```bash
 cd /home/vanlife/VanLife-Aggregator-laravel/mcp-server
-git pull
-npm install
+npm ci            # package-lock.json must equal the public repo's copy
 npm run build
-sudo systemctl restart openvan-mcp-sse
+kill -9 $(systemctl show openvan-mcp-sse.service -p MainPID --value)   # systemd starts it again
+curl -s http://127.0.0.1:4800/healthz                                  # new version
 journalctl -u openvan-mcp-sse -n 20 --no-pager
 ```
+
+Releasing to npm, the MCP Registry and the site is a separate procedure: see `docs/PUBLIC_API.md`
+in the site repo (section «Выпуск MCP»).
 
 ## Logs
 
