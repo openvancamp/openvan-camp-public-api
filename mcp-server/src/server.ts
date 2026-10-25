@@ -13,6 +13,8 @@ import {
   findCheapestFuelInput,
 } from "./tools/fuel.js";
 import {
+  getCityClimate,
+  getCityClimateInput,
   getCityWeather,
   getCityWeatherInput,
   getVanSkyWeather,
@@ -149,7 +151,7 @@ const INSTRUCTIONS = [
   "OpenVan.camp: road-trip and vanlife travel data for 200+ countries, with interactive cards in Claude and ChatGPT.",
   "Always pass locale = the language the user writes in (en, ru, de, fr, es, pt, tr): answers, cards, place names and units follow it.",
   "When the user describes a trip from A to B (or several stops), call plan_road_trip first: it returns the whole trip (route, days, budget, visas, vehicle stay, road rules, holidays, hazards) in one call. Use the single-topic tools only for follow-up questions.",
-  "Weather: get_city_travel_weather for a city, get_country_travel_weather for a country (it also names the best and worst cities for the coming week), list_best_weather_countries to choose where to go.",
+  "Weather: get_city_travel_weather for a city, get_country_travel_weather for a country (it also names the best and worst cities for the coming week), list_best_weather_countries to choose where to go. These cover today and the coming 7 days; for a later date or 'when is the best time to go', get_city_climate gives the typical weather (climate, 2021–2025) on any day of the year and the best month.",
   "A 'no data' answer means OpenVan.camp has no data for it, not that nothing applies: never tell the user a border is open, a road is free or a date has no holidays because data is missing.",
   "Prices in the cards are converted with fresh exchange rates; quote them as approximate and give the source link.",
 ].join("\n");
@@ -368,6 +370,18 @@ export function createServer(host: HostKind = "other"): McpServer {
       _meta: toolUiMeta(WIDGETS.weather, "Checking travel weather…", "Travel weather ready"),
     },
     withAttribution(getCityWeather)
+  );
+  server.registerTool(
+    "get_city_climate",
+    {
+      title: "Typical Weather On Any Date",
+      description:
+        "What the weather is usually like in a city or at any point on a given day of the year, from the ERA5 climate archive 2021–2025 (median of 35 archive days: the date ±3 days over five years): day and night temperature, on how many of the 35 days there was precipitation, the usual sky, sea or large-lake water temperature, solar radiation for panels and the VanSky climate index; plus all 12 months and the best month to travel. Climate, not a forecast. Use it for dates beyond the coming week (\"weather in Batumi in mid-September\", \"is the sea warm in Antalya in May\") and for \"when is the best time to go\"; for today and this week use get_city_travel_weather. Omit date to get the month overview.",
+      inputSchema: getCityClimateInput,
+      annotations: readOnlyAnnotations("Typical Weather On Any Date"),
+      _meta: toolUiMeta(WIDGETS.climate, "Looking up the typical weather…", "Typical weather ready"),
+    },
+    withAttribution(getCityClimate)
   );
   server.registerTool(
     "list_best_weather_countries",

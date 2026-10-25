@@ -104,6 +104,21 @@ class OpenVanTest(unittest.TestCase):
         with mock.patch("openvan.client.urlopen", fake):
             self.assertEqual([c["code"] for c in OpenVan().weather.top(2)], ["B", "C"])
 
+    def test_climate_point_passes_lat_lng_and_date(self):
+        fake, calls = respond({"/api/vansky/climate": {"period": "2021–2025", "day": {"date": "09-18"}}})
+        with mock.patch("openvan.client.urlopen", fake):
+            self.assertEqual(OpenVan().weather.climate(41.64, 41.63, "09-18")["day"]["date"], "09-18")
+        q = parse_qs(urlparse(calls[0].full_url).query)
+        self.assertEqual((q["lat"], q["lng"], q["date"]), (["41.64"], ["41.63"], ["09-18"]))
+
+    def test_city_climate_without_date_drops_empty_params(self):
+        fake, calls = respond({"/api/vansky/climate/GE/batumi": {"period": "2021–2025", "months": []}})
+        with mock.patch("openvan.client.urlopen", fake):
+            OpenVan().weather.city_climate("ge", "batumi")
+        url = urlparse(calls[0].full_url)
+        self.assertEqual(url.path, "/api/vansky/climate/GE/batumi")
+        self.assertNotIn("date", parse_qs(url.query))
+
     def test_route_cost_posts_json(self):
         fake, calls = respond({"/api/route-cost": {"distance_km": 345}})
         with mock.patch("openvan.client.urlopen", fake):

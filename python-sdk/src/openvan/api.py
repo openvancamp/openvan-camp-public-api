@@ -151,6 +151,21 @@ class Weather(_Resource):
         """Top countries by vanlife weather suitability today, best first."""
         return sorted(self.all(), key=lambda c: c.get("van_score") or 0, reverse=True)[:limit]
 
+    def climate(self, lat: float, lng: float, date: Optional[str] = None) -> JSON:
+        """Typical weather (climate) at any point: median of 35 archive days (the date ±3 days over
+        2021–2025, ERA5). With ``date`` (``MM-DD`` or ``YYYY-MM-DD``) the result has ``day``; without it,
+        ``days`` holds all 366 days. ``months``, ``best_month`` and ``good_months`` are always included.
+        """
+        return self.client.get("/api/vansky/climate", {"lat": lat, "lng": lng, "date": date})
+
+    def city_climate(
+        self, code: str, city_slug: str, date: Optional[str] = None, locale: Optional[str] = None
+    ) -> JSON:
+        """The same as :meth:`climate` for a VanSky city, plus the city name and page URL."""
+        return self.client.get(
+            f"/api/vansky/climate/{code.upper()}/{quote(city_slug)}", {"date": date, "locale": locale}
+        )
+
 
 class Events(_Resource):
     def list(self, **filters: Any) -> JSON:

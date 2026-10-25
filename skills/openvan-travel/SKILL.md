@@ -38,6 +38,9 @@ If the `openvan` MCP tools are not available, call the REST API instead — the 
    in USD) — the tools already account for it, so do not "fix" the numbers.
 6. **Hazards are the situation now, not a forecast.** Weather scores (0–100) rate how good the
    weather is for travelling and sleeping in a van, not how warm it is.
+   Weather tools cover today and the coming 7 days. For a later date or "when is the best time to
+   go", `get_city_climate` gives the typical weather (climate, ERA5 2021–2025): say it is what the
+   weather is usually like on that date, not a forecast.
 7. **License plates:** explain formats and region codes; never try to identify a vehicle owner.
 8. **Sources:** each tool result carries the URL of the page it comes from; include it where the
    user would want to check details or read more.
@@ -56,6 +59,7 @@ If the `openvan` MCP tools are not available, call the REST API instead — the 
 | Is it safe now, disasters / wildfires near a place | `get_travel_hazards` / `get_active_fires` |
 | Sockets, voltage, campsite hook-up | `get_power_plugs` |
 | Weather for one city / a country / where to go for good weather | `get_city_travel_weather` / `get_country_travel_weather` / `list_best_weather_countries` |
+| Usual weather on a later date, sea temperature in a month, best month to go | `get_city_climate` (city or lat/lng; omit `date` for the 12 months) |
 | How expensive food is / compare / rank | `get_country_food_prices` / `compare_food_prices` / `rank_food_prices` |
 | Convert money | `get_currency_rate` |
 | Vanlife events, festivals, expos | `list_events`, then `get_event` |

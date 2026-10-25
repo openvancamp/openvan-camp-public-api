@@ -5,7 +5,7 @@
 
 **Official MCP server for [OpenVan.camp](https://openvan.camp)** — free, no-auth, machine-readable vanlife and RV travel data for AI agents.
 
-Exposes 29 read-only tools via the [Model Context Protocol](https://modelcontextprotocol.io) so you can ask your AI assistant about:
+Exposes 30 read-only tools via the [Model Context Protocol](https://modelcontextprotocol.io) so you can ask your AI assistant about:
 
 - **Whole road trips** — `plan_road_trip` builds an [OpenVan.camp roadbook](https://openvan.camp/en/roadbook): day-by-day plan with overnights, budget (fuel, tolls, vignettes, ferries), entry and vehicle rules for every country on the way, and a shareable roadbook page
 - **Fuel prices** across all API-supported countries, using the same price keys as `/api/fuel/prices`
@@ -15,6 +15,7 @@ Exposes 29 read-only tools via the [Model Context Protocol](https://modelcontext
 - **Power plugs** — plug types, mains voltage and frequency, campsite hook-up connector (CEE17)
 - **Customs rules** — food bans, cash declaration, alcohol and tobacco limits, with official quotes
 - **VanSky** vanlife weather suitability scores (0-100) for countries and cities
+- **Typical weather (climate)** on any day of the year for any city or point — ERA5 2021–2025: temperature, precipitation days, sea temperature, solar radiation, the best month to travel
 - **VanBasket** food price index (world average = 100)
 - **Currency** conversion (150+ currencies)
 - **Events** (expos, festivals, meetups, road trips)
@@ -98,6 +99,7 @@ npx -y @openvancamp/mcp-server
 | `find_cheapest_fuel` | Top cheapest (or most expensive) countries by fuel type, filterable by region |
 | `get_country_travel_weather` | Campervan travel weather score (0-100), solar yield, 7-day forecast for one country |
 | `get_city_travel_weather` | Campervan travel weather of one city or town: today and the coming 7 days |
+| `get_city_climate` | Typical weather on any day of the year in a city or at any point (ERA5 2021–2025): day/night temperature, precipitation days of 35, sea, solar, VanSky climate index, 12 months and the best month |
 | `list_best_weather_countries` | Top N countries with the best travel weather today, filterable by region, or sorted by warmth |
 | `list_events` | Vanlife events (expos, festivals, meetups) with filters |
 | `get_event` | Details for one event by slug |

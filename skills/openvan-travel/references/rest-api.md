@@ -20,6 +20,7 @@ Full contract: <https://openvan.camp/docs.openapi>.
 | `get_active_fires` | `GET /api/hazards/fires?bbox=west,south,east,north` (up to 10°×10°) |
 | `get_power_plugs` | `GET /api/electricity/countries/{code}` |
 | `get_country_travel_weather`, `get_city_travel_weather`, `list_best_weather_countries` | `GET /api/vansky/weather/{code}`, `/api/vansky/weather/{code}/{city}`, `/api/vansky/weather` |
+| `get_city_climate` | `GET /api/vansky/climate?lat=&lng=&date=MM-DD`, `/api/vansky/climate/{code}/{city}?date=MM-DD` |
 | `get_country_food_prices`, `compare_food_prices` | `GET /api/vanbasket/countries/{code}`, `/api/vanbasket/compare?from=DE&to=TR` |
 | `get_currency_rate` | `GET /api/currency/rates` (EUR-based: `amount / rates[FROM] * rates[TO]`) |
 | `list_events`, `get_event` | `GET /api/events?country=DE&status=upcoming`, `GET /api/event/{slug}` |

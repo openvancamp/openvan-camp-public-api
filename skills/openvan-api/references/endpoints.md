@@ -23,6 +23,8 @@ Add `source=<your-app>` and, where text is returned, `locale=<en|ru|de|fr|es|pt|
 | `GET /api/vansky/weather` | Vanlife weather suitability scores (0–100) with 7-day forecast | 160+ countries |
 | `GET /api/vansky/weather/{code}` | One country, with marine and solar data | — |
 | `GET /api/vansky/weather/{code}/{city}` | One city: score today and for the coming 7 days | — |
+| `GET /api/vansky/climate?lat=&lng=&date=` | Typical weather on any day of the year anywhere (ERA5 2021–2025): `day` with `date`, otherwise 366 `days`; `months`, `best_month`. Cache it: it changes once a year | worldwide |
+| `GET /api/vansky/climate/{code}/{city}` | The same for a VanSky city | — |
 | `GET /api/visa/check?passport=RU&destination=TR` | Entry rules: entry mode, length of stay, how days are counted, vehicle import | 199 destinations |
 | `GET /api/visa/route?t=RU,GE,TR&p=RU` | Visa rules for a whole route, up to 10 passports | — |
 | `GET /api/visa/passport/{code}` | All destinations for one passport | — |

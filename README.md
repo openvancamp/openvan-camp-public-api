@@ -24,7 +24,7 @@ Free, no-auth API for vanlife data: fuel prices, route fuel cost, toll roads, ho
 
 **Daily CSV snapshots:** [`openvancamp/openvan-travel-data`](https://github.com/openvancamp/openvan-travel-data) — fuel prices, exchange rates, food cost index and weather scores as CSV/JSON, one commit a day, with history.
 
-**MCP Server (for AI agents):** [`mcp-server/`](./mcp-server) — 29 read-only tools with interactive cards in Claude and ChatGPT (incl. `plan_road_trip` — a whole-trip roadbook), hosted at `https://mcp.openvan.camp/mcp`, or locally `npx -y @openvancamp/mcp-server` for Claude Desktop / Cursor / Windsurf. [Install docs →](./mcp-server/README.md) · [AI agents guide →](https://openvan.camp/ai?utm_source=github&utm_medium=referral&utm_campaign=public-api-repo)
+**MCP Server (for AI agents):** [`mcp-server/`](./mcp-server) — 30 read-only tools with interactive cards in Claude and ChatGPT (incl. `plan_road_trip` — a whole-trip roadbook), hosted at `https://mcp.openvan.camp/mcp`, or locally `npx -y @openvancamp/mcp-server` for Claude Desktop / Cursor / Windsurf. [Install docs →](./mcp-server/README.md) · [AI agents guide →](https://openvan.camp/ai?utm_source=github&utm_medium=referral&utm_campaign=public-api-repo)
 
 **Gemini CLI extension:** install this repository with `gemini extensions install https://github.com/openvancamp/openvan-camp-public-api`. The root [`gemini-extension.json`](./gemini-extension.json) connects Gemini CLI directly to the hosted OpenVan.camp MCP server; no API key is required.
 
@@ -69,6 +69,8 @@ The OpenAPI spec at `/docs.openapi` is generated from the live codebase and is t
 | `GET /api/vansky/weather` | Vanlife weather suitability scores (0–100) with 7-day forecast | 160+ countries |
 | `GET /api/vansky/weather/{code}` | One country, with marine and solar data | — |
 | `GET /api/vansky/weather/{code}/{city}` | One city: score today and for the coming 7 days | — |
+| `GET /api/vansky/climate?lat=&lng=&date=` | Typical weather on any day of the year anywhere (ERA5 2021–2025): temperature, precipitation days, sky, sea, solar, VanSky index, months, best month | worldwide |
+| `GET /api/vansky/climate/{code}/{city}` | The same for a VanSky city | — |
 | `GET /api/visa/check?passport=RU&destination=TR` | Entry rules: entry mode, length of stay, how days are counted, vehicle import | 199 destinations |
 | `GET /api/visa/route?t=RU,GE,TR&p=RU` | Visa rules for a whole route, up to 10 passports | — |
 | `GET /api/visa/passport/{code}` | All destinations for one passport | — |

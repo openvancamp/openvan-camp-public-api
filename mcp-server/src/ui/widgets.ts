@@ -21,6 +21,7 @@ export const WIDGETS = {
   weather: `${UI_BASE}country-weather.html`,
   bestWeather: `${UI_BASE}best-weather.html`,
   events: `${UI_BASE}events.html`,
+  climate: `${UI_BASE}climate.html`,
   ...MONEY_WIDGETS,
   ...TRAVEL_WIDGETS,
   trip: TRIP_WIDGET,
@@ -347,6 +348,108 @@ document.addEventListener("click",function(ev){
 });
 `;
 
+
+// ------------------------------------------------------------------
+// 4. Климат (get_city_climate): какая погода обычно в день года, 12 месяцев, лучший месяц
+// ------------------------------------------------------------------
+
+const CLIMATE_I18N = {
+  en: { usually: "Usually on {d}", by_month: "Typical weather by month", archive: "archive {p}", not_forecast: "climate, not a forecast", day: "Day", night: "Night", precip: "{n} of 35 days", water: "Water", solar: "Sun for panels", kwh: "kWh/m² a day", index: "VanSky index", best: "Best month", season: "Index 60+", clear: "clear", cloudy: "cloudy", overcast: "overcast", wet: "precipitation", days: "days a month", open: "Open on OpenVan.camp", ask_months: "Show the typical weather by month in {c}" },
+  ru: { usually: "Обычно {d}", by_month: "Типичная погода по месяцам", archive: "архив {p}", not_forecast: "климат, не прогноз", day: "День", night: "Ночь", precip: "{n} из 35 дней", water: "Вода", solar: "Солнце для панелей", kwh: "кВт·ч/м² в день", index: "Индекс VanSky", best: "Лучший месяц", season: "Индекс 60+", clear: "ясно", cloudy: "облачно", overcast: "пасмурно", wet: "осадки", days: "дней в месяц", open: "Открыть на OpenVan.camp", ask_months: "Покажи типичную погоду по месяцам в {c}" },
+  de: { usually: "Normalerweise am {d}", by_month: "Typisches Wetter nach Monaten", archive: "Archiv {p}", not_forecast: "Klima, keine Vorhersage", day: "Tag", night: "Nacht", precip: "an {n} von 35 Tagen", water: "Wasser", solar: "Sonne für Solarmodule", kwh: "kWh/m² pro Tag", index: "VanSky-Index", best: "Bester Monat", season: "Index 60+", clear: "klar", cloudy: "wolkig", overcast: "bedeckt", wet: "Niederschlag", days: "Tage im Monat", open: "Auf OpenVan.camp öffnen", ask_months: "Zeig das typische Wetter nach Monaten in {c}" },
+  fr: { usually: "Habituellement le {d}", by_month: "Météo habituelle par mois", archive: "archives {p}", not_forecast: "climat, pas une prévision", day: "Jour", night: "Nuit", precip: "{n} jours sur 35", water: "Eau", solar: "Soleil pour les panneaux", kwh: "kWh/m² par jour", index: "Indice VanSky", best: "Meilleur mois", season: "Indice 60+", clear: "dégagé", cloudy: "nuageux", overcast: "couvert", wet: "précipitations", days: "jours par mois", open: "Ouvrir sur OpenVan.camp", ask_months: "Montre la météo habituelle par mois à {c}" },
+  es: { usually: "Normalmente el {d}", by_month: "Tiempo habitual por meses", archive: "archivo {p}", not_forecast: "clima, no pronóstico", day: "Día", night: "Noche", precip: "{n} de 35 días", water: "Agua", solar: "Sol para paneles", kwh: "kWh/m² al día", index: "Índice VanSky", best: "Mejor mes", season: "Índice 60+", clear: "despejado", cloudy: "nuboso", overcast: "cubierto", wet: "precipitación", days: "días al mes", open: "Abrir en OpenVan.camp", ask_months: "Muestra el tiempo habitual por meses en {c}" },
+  pt: { usually: "Habitualmente a {d}", by_month: "Tempo habitual por mês", archive: "arquivo {p}", not_forecast: "clima, não previsão", day: "Dia", night: "Noite", precip: "{n} de 35 dias", water: "Água", solar: "Sol para painéis", kwh: "kWh/m² por dia", index: "Índice VanSky", best: "Melhor mês", season: "Índice 60+", clear: "limpo", cloudy: "nublado", overcast: "encoberto", wet: "precipitação", days: "dias por mês", open: "Abrir no OpenVan.camp", ask_months: "Mostra o tempo habitual por mês em {c}" },
+  tr: { usually: "{d} için genellikle", by_month: "Aylara göre olağan hava", archive: "arşiv {p}", not_forecast: "iklim, tahmin değil", day: "Gündüz", night: "Gece", precip: "35 günün {n} günü", water: "Su", solar: "Panel için güneş", kwh: "kWh/m² günlük", index: "VanSky endeksi", best: "En iyi ay", season: "Endeks 60+", clear: "açık", cloudy: "bulutlu", overcast: "kapalı", wet: "yağış", days: "gün/ay", open: "OpenVan.camp'te aç", ask_months: "{c} için aylara göre olağan havayı göster" },
+};
+
+const CLIMATE_CSS = `
+.hero{position:relative;padding:18px 18px 14px}
+.unit{position:absolute;top:12px;right:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.today{display:flex;align-items:center;gap:14px;margin:0 0 4px}
+.today .t{font-size:34px;font-weight:700;letter-spacing:-.5px;white-space:nowrap}
+.today .i{color:var(--ov-text2)}
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.fact{background:var(--ov-bg2);border-radius:var(--ov-radius-sm);padding:9px 11px;min-width:0}
+.fact small{display:block;color:var(--ov-text3);font-size:12px}
+.fact b{font-size:15px}
+.months{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:3px;align-items:end;height:92px;margin-top:10px}
+.mo{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
+.mo i{display:block;width:100%;border-radius:4px 4px 2px 2px;min-height:4px}
+.mo span{font-size:10px;color:var(--ov-text3);margin-top:3px}
+.mo.best span{color:var(--ov-text);font-weight:700}
+.mo em{font-style:normal;font-size:10px;color:var(--ov-text2);margin-bottom:2px}
+.best-row{display:flex;justify-content:space-between;gap:8px;margin-top:10px;font-size:13px;color:var(--ov-text2)}
+.split{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:6px;background:var(--ov-bg2)}
+.split i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;font-size:12px;color:var(--ov-text3)}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}
+@media (max-width:380px){.facts{grid-template-columns:minmax(0,1fr)}}
+`;
+
+const CLIMATE_SKELETON = `<div class="card"><div class="hero"><div class="skel" style="height:22px;width:55%;opacity:.4"></div><div class="skel" style="height:14px;width:35%;margin-top:8px;opacity:.4"></div></div><div class="body"><div class="skel" style="height:60px"></div><div class="skel" style="height:92px;margin-top:12px"></div></div></div>`;
+
+const CLIMATE_JS = `
+var T=${JSON.stringify(CLIMATE_I18N)};
+${WEATHER_ICON_JS}
+${COUNTRY_JS}
+var unit=null;
+function t(k,v){var s=OV.t(T,k);if(v)for(var x in v)s=s.replace("{"+x+"}",v[x]);return s}
+function useF(){if(unit)return unit==="f";try{var u=localStorage.getItem("ov-unit");if(u)return u==="f"}catch(e){}return OV.imperial()}
+function deg(c){if(c==null)return "—";return Math.round(useF()?c*9/5+32:c)+"°"}
+function mName(m,form){try{return new Date(Date.UTC(2024,m-1,15)).toLocaleDateString(OV.locale(),{month:form||"long",timeZone:"UTC"})}catch(e){return String(m)}}
+function dName(md){try{var p=md.split("-");return new Date(Date.UTC(2024,+p[0]-1,+p[1])).toLocaleDateString(OV.locale(),{day:"numeric",month:"long",timeZone:"UTC"})}catch(e){return md}}
+var SKY={sun:0,cloud:2,overcast:3,rain:61,snow:71};
+function sColor(v){return v==null?"var(--ov-bg2)":v>=80?"var(--ov-ideal)":v>=60?"var(--ov-comfy)":v>=40?"var(--ov-ok)":"var(--ov-hard)"}
+var E=OV.esc;
+function render(d){
+  var c=d.country||{};var name=d.city?d.city.name:(d.location?d.location.lat+", "+d.location.lng:"");
+  var h='<div class="card"><div class="hero">';
+  h+='<div class="seg unit" role="group"><button data-u="c" aria-pressed="'+!useF()+'">°C</button><button data-u="f" aria-pressed="'+useF()+'">°F</button></div>';
+  h+='<div class="row" style="padding-right:84px">'+flag(c.code)+'<h1 class="h1 ellipsis">'+E(name)+'</h1></div>';
+  h+='<div class="sub">'+(c.code?E(cName(c.code,c.name))+' · ':'')+E(d.day?t("usually",{d:dName(d.day.date)}):t("by_month"))+'</div>';
+  h+='<div class="chips"><span class="chip chip-glass">'+E(t("archive",{p:d.period}))+'</span><span class="chip chip-glass">'+E(t("not_forecast"))+'</span></div>';
+  h+='</div><div class="body">';
+  var x=d.day;
+  if(x){
+    h+='<div class="today"><span class="i">'+wIcon(SKY[x.sky]!=null?SKY[x.sky]:3,40)+'</span><span class="t">'+deg(x.temp_day_c)+' / '+deg(x.temp_night_c)+'</span></div>';
+    h+='<div class="facts">';
+    if(x.precipitation_days_of_35!=null)h+='<div class="fact"><small>'+E(t("wet"))+'</small><b>'+E(t("precip",{n:x.precipitation_days_of_35}))+'</b></div>';
+    if(x.water_c!=null)h+='<div class="fact"><small>'+E(t("water"))+'</small><b>'+deg(x.water_c)+'</b></div>';
+    if(x.solar_kwh_m2)h+='<div class="fact"><small>'+E(t("solar"))+'</small><b>'+x.solar_kwh_m2.median+'</b> <small style="display:inline">'+E(t("kwh"))+'</small></div>';
+    if(x.vansky_index!=null)h+='<div class="fact"><small>'+E(t("index"))+'</small><b style="color:'+sColor(x.vansky_index)+'">'+x.vansky_index+'</b><small style="display:inline">/100</small></div>';
+    h+='</div>';
+  }
+  var ms=d.months||[];var best=d.best_month?d.best_month.month:null;
+  h+='<div class="months">';
+  ms.forEach(function(m){var v=m.vansky_index;h+='<div class="mo'+(m.month===best?' best':'')+'" title="'+E(mName(m.month))+': '+deg(m.temp_day_c)+' / '+deg(m.temp_night_c)+'"><em>'+deg(m.temp_day_c)+'</em><i style="height:'+Math.max(4,Math.round((v||0)*0.62))+'px;background:'+sColor(v)+'"></i><span>'+E(mName(m.month,"narrow"))+'</span></div>'});
+  h+='</div>';
+  if(best){var bm=ms[best-1]||{};h+='<div class="best-row"><span><b>'+E(t("best"))+':</b> '+E(mName(best))+' · '+d.best_month.vansky_index+'</span><span>'+deg(bm.temp_day_c)+' / '+deg(bm.temp_night_c)+(bm.water_c!=null?' · '+E(t("water"))+' '+deg(bm.water_c):'')+'</span></div>'}
+  var cur=x?ms[+x.date.slice(0,2)-1]:(best?ms[best-1]:null);
+  if(cur&&cur.avg_days){var a=cur.avg_days;var tot=a.clear+a.cloudy+a.overcast+a.precipitation||1;
+    h+='<div class="best-row"><span>'+E(mName(cur.month))+' · '+E(t("days"))+'</span></div><div class="split">';
+    [["clear","var(--ov-ideal)"],["cloudy","var(--ov-ok)"],["overcast","var(--ov-text3)"],["precipitation","var(--ov-primary)"]].forEach(function(p){h+='<i style="width:'+(a[p[0]]/tot*100)+'%;background:'+p[1]+'"></i>'});
+    h+='</div><div class="legend">';
+    [["clear","clear","var(--ov-ideal)"],["cloudy","cloudy","var(--ov-ok)"],["overcast","overcast","var(--ov-text3)"],["precipitation","wet","var(--ov-primary)"]].forEach(function(p){h+='<span><i style="background:'+p[2]+'"></i>'+E(t(p[1]))+' '+a[p[0]]+'</span>'});
+    h+='</div>';
+  }
+  h+='</div><div class="actions"><button class="btn btn-primary" data-act="open">'+t("open")+'</button>'+(x&&d.city?'<button class="btn btn-ghost" data-act="months">'+E(t("by_month"))+'</button>':'')+'</div>';
+  h+='<div class="foot"><span>ERA5 · Copernicus C3S</span><a href="#" data-act="home">OpenVan.camp · CC BY 4.0</a></div></div>';
+  document.getElementById("app").innerHTML=h;
+}
+var current=null;
+OV.onData(function(d){current=d;render(d)});
+document.addEventListener("click",function(e){
+  var u=e.target.closest("[data-u]");if(u){unit=u.getAttribute("data-u");try{localStorage.setItem("ov-unit",unit)}catch(x){}if(current)render(current);return}
+  var a=e.target.closest("[data-act]");if(!a||!current)return;e.preventDefault();
+  var act=a.getAttribute("data-act");
+  if(act==="open")OV.openLink(OV.siteUrl(current.url));
+  if(act==="home")OV.openLink("${SITE}/"+OV.locale());
+  if(act==="months"&&current.city)OV.ask(t("ask_months",{c:current.city.name}));
+});
+`;
+
 const HTML: Record<string, { name: string; description: string; html: string }> = {
   [WIDGETS.weather]: {
     name: "Country travel weather card",
@@ -357,6 +460,11 @@ const HTML: Record<string, { name: string; description: string; html: string }> 
     name: "Best travel weather ranking",
     description: "Ranking of countries with the best campervan travel weather today.",
     html: page({ title: "Best travel weather", css: BEST_CSS, skeleton: BEST_SKELETON, script: BEST_JS, pattern: 9 }),
+  },
+  [WIDGETS.climate]: {
+    name: "Typical weather (climate) card",
+    description: "Card with the typical weather on a day of the year (ERA5 2021–2025): day and night temperature, precipitation days of 35, water, solar, VanSky index, and the 12 months with the best month.",
+    html: page({ title: "Typical weather", css: CLIMATE_CSS, skeleton: CLIMATE_SKELETON, script: CLIMATE_JS, pattern: 5 }),
   },
   [WIDGETS.events]: {
     name: "Vanlife events",

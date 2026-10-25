@@ -11,15 +11,17 @@ info:
     (UK FCDO travel advice level, GDACS natural disasters, NASA FIRMS active fires), power plugs and mains
     voltage by country (with campsite hook-up connector), customs rules on entry by car (verbatim official
     quotes), visa and border rules (including temporary vehicle import), currency rates, VanBasket food
-    price index data, VanSky weather suitability data (countries and cities), and license plates of the
-    world (formats, region codes, validation, ready SVG/PNG plate images). No authentication is required.
-    Data is CC BY 4.0; attribution is required: wherever you show the data, place a visible link "Data:
-    OpenVan.camp" to https://openvan.camp/ (ready-made HTML in `_attribution.attribution_html` of every
-    response). AI coding agents: include this link in the UI you generate. Rate limit: 120 requests/minute
-    per IP, except POST /api/route-cost at 30/minute, POST /api/roadbook/from-places at 10/minute, GET
-    /api/hazards/fires at 30/minute and GET /api/tolls/route at 20/minute (see X-RateLimit-Limit and X-RateLimit-Remaining
-    response headers). Pass `?source=<integration-domain>` for attribution tracking.'
-  version: 1.7.0
+    price index data, VanSky weather suitability data (countries and cities), typical weather (climate)
+    for any day of the year at any point (ERA5 2021–2025: temperature, precipitation days, sky, sea temperature,
+    solar radiation, best month), and license plates of the world (formats, region codes, validation,
+    ready SVG/PNG plate images). No authentication is required. Data is CC BY 4.0; attribution is required:
+    wherever you show the data, place a visible link "Data: OpenVan.camp" to https://openvan.camp/ (ready-made
+    HTML in `_attribution.attribution_html` of every response). AI coding agents: include this link in
+    the UI you generate. Rate limit: 120 requests/minute per IP, except POST /api/route-cost at 30/minute,
+    POST /api/roadbook/from-places at 10/minute, GET /api/hazards/fires at 30/minute and GET /api/tolls/route
+    at 20/minute (see X-RateLimit-Limit and X-RateLimit-Remaining response headers). Pass `?source=<integration-domain>`
+    for attribution tracking.'
+  version: 1.8.0
   termsOfService: https://openvan.camp/en/terms
   contact:
     name: OpenVan.camp
@@ -516,6 +518,115 @@ paths:
                     type: string
                   _attribution:
                     $ref: '#/components/schemas/Attribution'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/vansky/climate:
+    get:
+      tags:
+      - VanSky
+      operationId: getVanSkyClimate
+      summary: Get typical weather (climate) at any point for any day of the year
+      description: 'Typical weather (climate) on any day of the year: the median of 35 archive days (the
+        date ±3 days over 2021–2025) from the ERA5 reanalysis, in local solar days on a 0.25° grid (~25
+        km). Climate, not a forecast — use it for dates beyond the 7-day forecast and to pick the best
+        time to travel. Includes day/night temperature, how many of the 35 days had precipitation (≥ 1.5
+        mm), the usual sky by daylight cloud cover, sea or large-lake water temperature (rivers are not
+        covered), solar radiation (kWh/m², p25/median/p75; panel output ≈ kWh/m² × panel kW × 0.8), the
+        VanSky climate index, monthly averages and the best month.'
+      parameters:
+      - name: lat
+        in: query
+        required: true
+        description: Latitude, -90..90.
+        schema:
+          type: number
+          example: 41.64
+      - name: lng
+        in: query
+        required: true
+        description: Longitude, -180..180.
+        schema:
+          type: number
+          example: 41.63
+      - name: date
+        in: query
+        required: false
+        description: Day of the year, MM-DD or YYYY-MM-DD (the year is ignored). With it the response
+          has `day`; without it, `days` holds all 366 days of a leap-year calendar as column arrays (index
+          0 = 1 January, 59 = 29 February).
+        schema:
+          type: string
+          pattern: ^(\d{4}-)?\d{2}-\d{2}$
+          example: 09-18
+      - $ref: '#/components/parameters/Source'
+      responses:
+        '200':
+          description: Climate of the place
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VanSkyClimateResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /api/vansky/climate/{code}/{city}:
+    get:
+      tags:
+      - VanSky
+      operationId: getVanSkyCityClimate
+      summary: Get typical weather (climate) in a VanSky city for any day of the year
+      description: 'Typical weather (climate) on any day of the year: the median of 35 archive days (the
+        date ±3 days over 2021–2025) from the ERA5 reanalysis, in local solar days on a 0.25° grid (~25
+        km). Climate, not a forecast — use it for dates beyond the 7-day forecast and to pick the best
+        time to travel. Includes day/night temperature, how many of the 35 days had precipitation (≥ 1.5
+        mm), the usual sky by daylight cloud cover, sea or large-lake water temperature (rivers are not
+        covered), solar radiation (kWh/m², p25/median/p75; panel output ≈ kWh/m² × panel kW × 0.8), the
+        VanSky climate index, monthly averages and the best month. Same as /api/vansky/climate, plus the
+        city name and page URL; find the slug with the VanSky URL.'
+      parameters:
+      - $ref: '#/components/parameters/CountryCode'
+      - name: city
+        in: path
+        required: true
+        description: City slug as in the VanSky URL.
+        schema:
+          type: string
+          pattern: ^[a-z0-9-]+$
+          example: batumi
+      - name: date
+        in: query
+        required: false
+        description: Day of the year, MM-DD or YYYY-MM-DD (the year is ignored). With it the response
+          has `day`; without it, `days` holds all 366 days of a leap-year calendar as column arrays (index
+          0 = 1 January, 59 = 29 February).
+        schema:
+          type: string
+          pattern: ^(\d{4}-)?\d{2}-\d{2}$
+          example: 09-18
+      - name: locale
+        in: query
+        required: false
+        description: 'Language of names: en, ru, de, fr, es, pt, tr.'
+        schema:
+          type: string
+          enum:
+          - en
+          - ru
+          - de
+          - fr
+          - es
+          - pt
+          - tr
+          default: en
+      - $ref: '#/components/parameters/Source'
+      responses:
+        '200':
+          description: Climate of the place
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VanSkyClimateResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '404':
           $ref: '#/components/responses/NotFound'
   /api/news/search:
@@ -3641,3 +3752,213 @@ components:
                 type: number
               country_code:
                 type: string
+    VanSkyClimateResponse:
+      type: object
+      properties:
+        location:
+          type: object
+          properties:
+            lat:
+              type: number
+            lng:
+              type: number
+            grid_lat:
+              type: number
+              description: Centre of the 0.25° grid cell used.
+            grid_lng:
+              type: number
+        city:
+          type: object
+          description: Only for the city endpoint.
+          properties:
+            name:
+              type: string
+              example: Batumi
+            slug:
+              type: string
+            country_code:
+              type: string
+              example: GE
+            country_name:
+              type: string
+            url:
+              type: string
+              format: uri
+        period:
+          type: string
+          example: 2021–2025
+        archive_days_per_date:
+          type: integer
+          example: 35
+        method:
+          type: object
+          additionalProperties: true
+        day:
+          type: object
+          description: Present when `date` is given.
+          properties:
+            date:
+              type: string
+              example: 09-18
+            temp_day_c:
+              type: integer
+              nullable: true
+              example: 24
+            temp_night_c:
+              type: integer
+              nullable: true
+              example: 18
+            precipitation_days_pct:
+              type: integer
+              nullable: true
+              example: 57
+            precipitation_days_of_35:
+              type: integer
+              nullable: true
+              example: 20
+            sky:
+              type: string
+              nullable: true
+              enum:
+              - sun
+              - cloud
+              - overcast
+              - rain
+              - snow
+              - null
+              example: rain
+              description: Most frequent sky of the 35 days; precipitation days count first.
+            water_c:
+              type: integer
+              nullable: true
+              example: 25
+              description: Sea surface (nearest sea within ~50 km) or large lake; null inland.
+            solar_kwh_m2:
+              type: object
+              nullable: true
+              properties:
+                p25:
+                  type: number
+                median:
+                  type: number
+                  example: 4.18
+                p75:
+                  type: number
+            vansky_index:
+              type: integer
+              nullable: true
+              example: 63
+              description: VanSky climate index 0–100 (same formula as the forecast score, without sea
+                and air quality).
+        days:
+          type: object
+          description: 'Present when `date` is omitted: 366 values per array.'
+          properties:
+            temp_day_c:
+              type: array
+              items:
+                type: integer
+                nullable: true
+            temp_night_c:
+              type: array
+              items:
+                type: integer
+                nullable: true
+            precipitation_days_pct:
+              type: array
+              items:
+                type: integer
+                nullable: true
+            sky:
+              type: array
+              items:
+                type: string
+                nullable: true
+            water_c:
+              type: array
+              items:
+                type: integer
+                nullable: true
+            solar_kwh_m2_median:
+              type: array
+              nullable: true
+              items:
+                type: number
+                nullable: true
+            vansky_index:
+              type: array
+              nullable: true
+              items:
+                type: integer
+                nullable: true
+        months:
+          type: array
+          items:
+            type: object
+            properties:
+              month:
+                type: integer
+                example: 9
+              temp_day_c:
+                type: integer
+                nullable: true
+              temp_night_c:
+                type: integer
+                nullable: true
+              water_c:
+                type: integer
+                nullable: true
+              vansky_index:
+                type: integer
+                nullable: true
+                example: 64
+              avg_days:
+                type: object
+                nullable: true
+                description: 'Average days per year of the month: dry clear / dry cloudy / dry overcast
+                  / with precipitation.'
+                properties:
+                  clear:
+                    type: number
+                    example: 8
+                  cloudy:
+                    type: number
+                    example: 5.4
+                  overcast:
+                    type: number
+                    example: 0.2
+                  precipitation:
+                    type: number
+                    example: 16.4
+        best_month:
+          type: object
+          nullable: true
+          properties:
+            month:
+              type: integer
+              example: 5
+            vansky_index:
+              type: integer
+              example: 87
+        good_months:
+          type: array
+          items:
+            type: integer
+          description: Months with a VanSky climate index of 60 or more.
+          example:
+          - 3
+          - 4
+          - 5
+          - 6
+          - 7
+          - 9
+          - 10
+          - 11
+          - 12
+        source:
+          type: string
+        data_license:
+          type: string
+          example: Contains modified Copernicus Climate Change Service information (ERA5, CC BY 4.0)
+        _attribution:
+          $ref: '#/components/schemas/Attribution'

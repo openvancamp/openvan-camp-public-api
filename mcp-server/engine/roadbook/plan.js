@@ -686,8 +686,10 @@ export function buildPlan(payload, inputs, visa, env) {
         ? route.tolls?.unknown_countries || []
         : ranges.map(r => r.cc));
     // Visiting every country with a probe does not mean every segment was checked.
+    // Сервер называет страны, где плата за километры не измерена; старый скелет без списка — все.
     if ((route.road?.partial === true || route.tolls?.partial === true) && !route.tolls?.unknown_countries?.length) {
-        ranges.forEach(r => unknownToll.add(r.cc));
+        const unchecked = route.tolls?.unchecked_countries;
+        ranges.filter(r => !Array.isArray(unchecked) || unchecked.includes(r.cc)).forEach(r => unknownToll.add(r.cc));
     }
     uncertainBypass.forEach(x => unknownToll.add(x.country));
     if (route.avoid_tolls && !Number.isFinite(route.road?.toll_km)) {

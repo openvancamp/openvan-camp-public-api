@@ -116,6 +116,55 @@ export interface VanSkyTopEntry {
 
 export type VanSkyTopResponse = ApiResponse<VanSkyTopEntry[]>;
 
+/** Typical weather (climate) on one day of the year: median of 35 archive days (ERA5 2021–2025). */
+export interface VanSkyClimateDay {
+  /** MM-DD */
+  date: string;
+  temp_day_c: number | null;
+  temp_night_c: number | null;
+  /** Share of the 35 archive days with at least 1.5 mm of precipitation */
+  precipitation_days_pct: number | null;
+  precipitation_days_of_35: number | null;
+  /** Most frequent sky of the 35 days: sun, cloud, overcast, rain, snow */
+  sky: string | null;
+  /** Sea surface (nearest sea within ~50 km) or large lake; null inland */
+  water_c: number | null;
+  /** Daily solar radiation, kWh/m². Panel output ≈ kWh/m² × panel kW × 0.8 */
+  solar_kwh_m2: { p25: number; median: number; p75: number } | null;
+  /** VanSky climate index 0–100 */
+  vansky_index: number | null;
+}
+
+export interface VanSkyClimateMonth {
+  month: number;
+  temp_day_c: number | null;
+  temp_night_c: number | null;
+  water_c: number | null;
+  vansky_index: number | null;
+  /** Average days per year of the month: dry clear / dry cloudy / dry overcast / with precipitation */
+  avg_days: { clear: number; cloudy: number; overcast: number; precipitation: number } | null;
+}
+
+export interface VanSkyClimate {
+  location: { lat: number; lng: number; grid_lat: number; grid_lng: number };
+  city?: { name: string; slug: string; country_code: string; country_name: string; url: string };
+  /** e.g. "2021–2025" */
+  period: string;
+  archive_days_per_date: number;
+  method: Record<string, unknown>;
+  /** Present when a date was passed */
+  day?: VanSkyClimateDay;
+  /** Present without a date: 366 values per array (leap-year calendar, index 0 = 1 January) */
+  days?: Record<string, unknown[] | null>;
+  months: VanSkyClimateMonth[];
+  best_month: { month: number; vansky_index: number } | null;
+  /** Months with a VanSky climate index of 60 or more */
+  good_months: number[];
+  source: string;
+  data_license: string;
+  _attribution?: Record<string, unknown>;
+}
+
 // ─── Events ──────────────────────────────────────────────────────────────────
 
 export type EventStatus = "upcoming" | "ongoing" | "past";

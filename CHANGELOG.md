@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-10-25
+
+### Added — API 1.8.0: typical weather (climate)
+- `GET /api/vansky/climate?lat=&lng=&date=MM-DD` and `GET /api/vansky/climate/{code}/{city}`: what the weather is
+  usually like on any day of the year, anywhere on Earth. Each value is the median of 35 archive days (the date
+  ±3 days over 2021–2025) from the ERA5 reanalysis, counted in local solar days on a 0.25° grid. The day gives day
+  and night temperature, on how many of the 35 days there was precipitation (≥ 1.5 mm), the usual sky by daylight
+  cloud cover, sea or large-lake water temperature, solar radiation (p25/median/p75) and the VanSky climate index;
+  every response also has the 12 months (average clear / cloudy / overcast / precipitation days, temperatures,
+  water, index) and the best month. Without `date` you get all 366 days as column arrays.
+- Data: ERA5, Copernicus Climate Change Service (C3S), CC BY 4.0; responses carry `data_license`.
+
+### Added — MCP server v0.10.0
+- New tool `get_city_climate` (30 read-only tools): the typical weather on a date in a city or at any point, the
+  12 months and the best month, with an interactive card. Use it for dates beyond the 7-day forecast and for
+  "when is the best time to go"; `get_city_travel_weather` stays for today and this week.
+
+### Added — JS SDK v1.3.0, Python SDK v0.2.0
+- `weather.climate(lat, lng, { date })` and `weather.cityClimate(code, slug, { date, locale })` in JS;
+  `weather.climate(lat, lng, date)` and `weather.city_climate(code, slug, date, locale)` in Python.
+
+### Changed — plugin v1.0.3
+- `openvan-travel` routes later dates and "best time to go" to `get_city_climate`; `openvan-api` lists the climate
+  endpoints.
+
 ## 2026-10-23
 
 ### Fixed — JS SDK v1.2.1, Python SDK v0.1.1

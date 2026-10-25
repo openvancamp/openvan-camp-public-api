@@ -373,3 +373,158 @@ export async function getCityWeather({ city, country_code, locale }: { city: str
     },
   };
 }
+
+// ------------------------------------------------------------------
+// get_city_climate — какая погода обычно в любой день года (ERA5, 2021–2025)
+// ------------------------------------------------------------------
+
+const ClimateMonthSchema = z.object({
+  month: z.number(),
+  temp_day_c: z.number().nullable(),
+  temp_night_c: z.number().nullable(),
+  water_c: z.number().nullable(),
+  vansky_index: z.number().nullable(),
+  avg_days: z.object({ clear: z.number(), cloudy: z.number(), overcast: z.number(), precipitation: z.number() }).nullable(),
+});
+
+const ClimateSchema = z.object({
+  location: z.object({ lat: z.number(), lng: z.number() }),
+  city: z.object({ name: z.string(), slug: z.string(), country_code: z.string(), country_name: z.string().nullable().optional(), url: z.string() }).optional(),
+  period: z.string(),
+  day: z
+    .object({
+      date: z.string(),
+      temp_day_c: z.number().nullable(),
+      temp_night_c: z.number().nullable(),
+      precipitation_days_pct: z.number().nullable(),
+      precipitation_days_of_35: z.number().nullable(),
+      sky: z.string().nullable(),
+      water_c: z.number().nullable(),
+      solar_kwh_m2: z.object({ p25: z.number(), median: z.number(), p75: z.number() }).nullable(),
+      vansky_index: z.number().nullable(),
+    })
+    .optional(),
+  months: z.array(ClimateMonthSchema),
+  best_month: z.object({ month: z.number(), vansky_index: z.number() }).nullable(),
+  good_months: z.array(z.number()),
+});
+
+const MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+export const getCityClimateInput = {
+  city: z
+    .string()
+    .min(2)
+    .optional()
+    .describe("City or town name in any language, e.g. Batumi, Antalya. Omit when passing lat and lng."),
+  country_code: z
+    .string()
+    .length(2)
+    .optional()
+    .describe("ISO 3166-1 alpha-2 country code to disambiguate the city (Barcelona ES vs Barcelona VE)."),
+  lat: z.number().min(-90).max(90).optional().describe("Latitude of any point, instead of a city."),
+  lng: z.number().min(-180).max(180).optional().describe("Longitude of any point, instead of a city."),
+  date: z
+    .string()
+    .regex(/^(\d{4}-)?\d{2}-\d{2}$/)
+    .optional()
+    .describe("Day of the year, MM-DD or YYYY-MM-DD (the year is ignored), e.g. 09-18. Omit for an overview of all 12 months and the best month."),
+  locale: z
+    .enum(["en", "ru", "de", "fr", "es", "pt", "tr"])
+    .optional()
+    .describe("Language of the conversation with the user. Pass it whenever the user writes in one of these languages."),
+};
+
+export async function getCityClimate({
+  city,
+  country_code,
+  lat,
+  lng,
+  date,
+  locale,
+}: {
+  city?: string;
+  country_code?: string;
+  lat?: number;
+  lng?: number;
+  date?: string;
+  locale?: string;
+}) {
+  const lang = locale ?? "en";
+  let raw: unknown;
+  let others: string[] = [];
+
+  if (lat != null && lng != null) {
+    raw = await apiGet("/api/vansky/climate", { lat, lng, ...(date ? { date } : {}) }).catch(() => null);
+  } else if (city) {
+    const found = SearchSchema.safeParse(await apiGet("/api/vansky/search", { q: city, locale: lang }));
+    const cities = found.success ? found.data.results.filter((r) => r.type === "city") : [];
+    const pick = cities.find((r) => !country_code || r.flag?.toUpperCase() === country_code.toUpperCase());
+    if (!pick || !pick.flag) {
+      return {
+        content: [{ type: "text" as const, text: `No city called "${city}"${country_code ? ` in ${country_code.toUpperCase()}` : ""} in OpenVan.camp. Pass lat and lng of the place instead: the climate covers any point on Earth.` }],
+        isError: true,
+      };
+    }
+    const slug = pick.url.split("/").filter(Boolean).pop()!;
+    others = cities.filter((r) => r !== pick).slice(0, 3).map((r) => `${r.name} (${r.sub ?? r.flag})`);
+    raw = await apiGet(`/api/vansky/climate/${pick.flag}/${slug}`, { locale: lang, ...(date ? { date } : {}) }).catch(() => null);
+  } else {
+    return { content: [{ type: "text" as const, text: "Pass a city, or lat and lng." }], isError: true };
+  }
+
+  const parsed = ClimateSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { content: [{ type: "text" as const, text: "OpenVan.camp has no climate data for this place." }] };
+  }
+
+  const d = parsed.data;
+  const place = d.city ? `${d.city.name}, ${d.city.country_name ?? d.city.country_code}` : `${d.location.lat}, ${d.location.lng}`;
+  const url = d.city?.url ?? `${SITE}/${lang}/vansky`;
+  const c = (v: number | null) => (v == null ? "—" : `${v}°C`);
+  const lines: (string | null)[] = [`OpenVan.camp typical weather (climate, not a forecast) for ${place}: median of 35 archive days, the date ±3 days over ${d.period} (ERA5).`];
+
+  if (d.day) {
+    const x = d.day;
+    lines.push(
+      `  ${x.date}: day ${c(x.temp_day_c)}, night ${c(x.temp_night_c)}, usual sky ${x.sky ?? "—"}`,
+      x.precipitation_days_of_35 != null ? `  Precipitation (≥ 1.5 mm) on ${x.precipitation_days_of_35} of 35 days` : null,
+      x.water_c != null ? `  Water (sea or large lake): ${x.water_c}°C` : null,
+      x.solar_kwh_m2 ? `  Solar radiation: ${x.solar_kwh_m2.median} kWh/m² a day (p25–p75 ${x.solar_kwh_m2.p25}–${x.solar_kwh_m2.p75}); panel output ≈ kWh/m² × panel kW × 0.8` : null,
+      x.vansky_index != null ? `  VanSky climate index: ${x.vansky_index}/100 (${labelOf(x.vansky_index)})` : null
+    );
+  }
+
+  lines.push("  Month: day/night °C, water, index, average days clear/cloudy/overcast/precipitation");
+  for (const m of d.months) {
+    const a = m.avg_days;
+    lines.push(
+      `  ${MONTHS_EN[m.month - 1].slice(0, 3)}: ${c(m.temp_day_c)}/${c(m.temp_night_c)}${m.water_c != null ? `, water ${m.water_c}°C` : ""}${m.vansky_index != null ? `, index ${m.vansky_index}` : ""}${a ? `, days ${a.clear}/${a.cloudy}/${a.overcast}/${a.precipitation}` : ""}`
+    );
+  }
+  if (d.best_month) {
+    lines.push(`  Best month: ${MONTHS_EN[d.best_month.month - 1]} (index ${d.best_month.vansky_index}); index 60+ in ${d.good_months.map((m) => MONTHS_EN[m - 1]).join(", ") || "no month"}`);
+  }
+  if (others.length) {
+    lines.push(`\nOther places with a similar name: ${others.join("; ")}`);
+  }
+  lines.push(`\nDetails: ${url}`);
+
+  return {
+    content: [{ type: "text" as const, text: lines.filter(Boolean).join("\n") }],
+    structuredContent: {
+      city: d.city ? { name: d.city.name, slug: d.city.slug } : null,
+      country: d.city ? { code: d.city.country_code, name: d.city.country_name ?? d.city.country_code } : null,
+      location: d.location,
+      period: d.period,
+      day: d.day ?? null,
+      months: d.months,
+      best_month: d.best_month,
+      good_months: d.good_months,
+      locale: locale ?? null,
+      units: { temperature: "°C", solar: "kWh/m² per day" },
+      url,
+      source: "OpenVan.camp (CC BY 4.0); climate: ERA5, Copernicus Climate Change Service (C3S)",
+    },
+  };
+}

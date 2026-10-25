@@ -12,6 +12,7 @@ import type {
   StoriesListOptions,
   VanSkyTopOptions,
   Locale,
+  VanSkyClimate,
   RouteCostOptions,
   TollVehicleClass,
   VisaCheckOptions,
@@ -219,6 +220,27 @@ class WeatherResource {
       { locale }
     );
     return res.data;
+  }
+
+  /**
+   * Typical weather (climate) at any point: median of 35 archive days (the date ±3 days over
+   * 2021–2025, ERA5). With `date` (MM-DD or YYYY-MM-DD) the result has `day`; without it, `days`
+   * holds all 366 days. `months`, `best_month` and `good_months` are always included.
+   */
+  async climate(lat: number, lng: number, options: { date?: string } = {}): Promise<VanSkyClimate> {
+    return this.client.get<VanSkyClimate>("/api/vansky/climate", { lat, lng, date: options.date });
+  }
+
+  /** The same as `climate()` for a VanSky city, plus the city name and page URL. */
+  async cityClimate(
+    countryCode: string,
+    citySlug: string,
+    options: { date?: string; locale?: Locale } = {}
+  ): Promise<VanSkyClimate> {
+    return this.client.get<VanSkyClimate>(
+      `/api/vansky/climate/${countryCode.toUpperCase()}/${encodeURIComponent(citySlug)}`,
+      { date: options.date, locale: options.locale }
+    );
   }
 
   /** All countries with weather data (one request, ~1 MB). */

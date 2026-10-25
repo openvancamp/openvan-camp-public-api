@@ -155,11 +155,17 @@ console.log(`diff: ${comp.diff_percent}%, €100 in Spain ≈ €${comp.budget_1
 | `.city(countryCode, citySlug, locale?)` | one city — `van_score` today, `week_score` for the coming 7 days, sleep / drive / solar |
 | `.all()` | every country with weather data |
 | `.top(options?)` | top N countries by `van_score`, best first |
+| `.climate(lat, lng, { date? })` | typical weather (climate) at any point: median of 35 archive days, ERA5 2021–2025 — `day` (with `date`) or 366 `days`, `months`, `best_month` |
+| `.cityClimate(countryCode, citySlug, { date?, locale? })` | the same for a VanSky city, with the city page URL |
 
 ```ts
 const fr = await ov.weather.score("FR");
 console.log(fr.van_score);      // today's score 0-100, fr.score_label: "ideal" … "poor"
 console.log(fr.forecast[0]);    // today's detailed scores
+
+// What the weather is usually like in Batumi on 18 September (climate, not a forecast)
+const c = await ov.weather.cityClimate("GE", "batumi", { date: "09-18" });
+console.log(c.day?.temp_day_c, c.day?.precipitation_days_of_35, c.best_month);
 ```
 
 ---

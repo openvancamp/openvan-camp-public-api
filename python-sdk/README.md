@@ -32,6 +32,10 @@ print(ov.tolls.route(["Rome", "Paris"], vehicle_class="van"))
 for c in ov.weather.top(5):
     print(c["code"], c["van_score"], c["score_label"])
 
+# Typical weather (climate) in Batumi on 18 September and the best month to go
+batumi = ov.weather.city_climate("GE", "batumi", date="09-18")
+print(batumi["day"]["temp_day_c"], batumi["day"]["precipitation_days_of_35"], batumi["best_month"])
+
 # School holidays in Germany this autumn, by federal state
 ov.holidays.country("DE", from_="2026-10-01", to="2026-12-31", kind="school")
 ```
