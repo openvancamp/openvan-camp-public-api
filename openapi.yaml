@@ -21,7 +21,7 @@ info:
     POST /api/roadbook/from-places at 10/minute, GET /api/hazards/fires at 30/minute and GET /api/tolls/route
     at 20/minute (see X-RateLimit-Limit and X-RateLimit-Remaining response headers). Pass `?source=<integration-domain>`
     for attribution tracking.'
-  version: 1.8.0
+  version: 1.8.1
   termsOfService: https://openvan.camp/en/terms
   contact:
     name: OpenVan.camp
@@ -413,6 +413,7 @@ paths:
         code.
       parameters:
       - $ref: '#/components/parameters/CountryCode'
+      - $ref: '#/components/parameters/Locale'
       responses:
         '200':
           description: VanSky country details
@@ -2405,7 +2406,8 @@ components:
           nullable: true
         precip_prob_max:
           type: number
-          description: Max precipitation probability in %.
+          description: Max precipitation probability in %. Where the weather model gives no probability,
+            it is estimated from the precipitation amount.
           nullable: true
         wind_max:
           type: number
@@ -2433,10 +2435,12 @@ components:
           type: string
           format: date-time
           nullable: true
+          description: Local time of the place with its UTC offset, e.g. 2026-10-26T07:38+04:00.
         sunset:
           type: string
           format: date-time
           nullable: true
+          description: Local time of the place with its UTC offset.
         weather_code:
           type: integer
           description: WMO weather code.
@@ -2515,10 +2519,9 @@ components:
         type:
           type: string
           enum:
-          - info
+          - success
           - warning
           - danger
-          - tip
         key:
           type: string
           description: Translation key, e.g. vansky.rec.awning_caution.
@@ -2526,6 +2529,9 @@ components:
           type: object
           additionalProperties: true
           description: Numeric params for the translated message.
+        text:
+          type: string
+          description: The message in the requested locale, numbers in metric units (°C, km/h, m).
     VanSkyCountry:
       type: object
       properties:
@@ -2551,7 +2557,7 @@ components:
           type: integer
           minimum: 0
           maximum: 100
-          description: Today's overall van suitability.
+          description: Today's overall van suitability; equals the first day of forecast (forecast[0].van_score).
         sleep_score:
           type: integer
           minimum: 0

@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-26
+
+### Changed — API 1.8.1: VanSky day and week scores
+- `van_score` (today) now equals the first forecast day (`forecast[0].van_score`): both are computed the same way,
+  with sea temperature on every day and air quality on day 0. Before, today and the first day could differ by a point.
+- `precip_prob_max`: where the weather model gives no probability, it is estimated from the precipitation amount.
+  Before, such days came with 0 % even when rain was forecast, so rainy days scored too high; scores of rainy days
+  and weeks are lower now.
+- `sunrise` / `sunset` are the local time of the place with its UTC offset (`2026-10-26T07:38+04:00`). Some
+  country responses used to carry UTC times without an offset.
+- `GET /api/vansky/weather/{code}` takes `locale`; each recommendation has `text` in that language (numbers in
+  °C, km/h, m) next to the translation `key`.
+- Forecast over Europe, the Mediterranean, North Africa and the Middle East now uses the 7 km ICON-EU model;
+  temperatures near the coast are closer to the land.
+
 ## 2026-10-25
 
 ### Added — API 1.8.0: typical weather (climate)
