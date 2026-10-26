@@ -2,6 +2,33 @@
 
 ## 2026-10-26
 
+### Added — API 1.9.0: VanSky rankings and methodology
+- `GET /api/vansky/weather/{code}/{city}` now returns the city as on its page: `today_score` and `week_score` with
+  labels, the place among the cities of the country this week (`rank`), `comfortable_days`, `worst_day`,
+  `best_window`, and for every forecast day the score breakdown (`sub_scores`, `weighted_score`, `adjustments`).
+  `include=hourly` adds 3-hour steps and sea data.
+- `GET /api/vansky/weather/{code}/cities`: cities of a country ranked by the week score (as on the site) or by today
+  (`sort=today`), with `limit` and `offset`.
+- `GET /api/vansky/ranking`: countries ranked by the week score or by today (`by=today`), optionally in one region.
+- `GET /api/vansky/methodology`: the VanSky formula as data (curves, weights, penalties, night and heat rules,
+  bonuses, week score, country score), enough to recompute any score; a test keeps it equal to the calculator.
+
+### Changed — MCP server v0.11.0
+- `get_city_travel_weather` adds the city's place among the cities of its country, comfortable days, the best
+  stretch and the worst day, today's score breakdown, a forecast with day and night temperature and rain, and
+  advice as text; the card shows the place in the country.
+- `list_best_weather_countries` takes `period=week` (the OpenVan.camp ranking) and reads the light
+  `/api/vansky/ranking` instead of every country.
+- Fixed: `region=north_america`, `south_america` and `asia` returned no countries. New regions `middle_east` and `cis`.
+
+### Added — JS SDK v1.4.0, Python SDK v0.3.0
+- `weather.cities(code, …)`, `weather.ranking({ by, region, limit })`, `weather.methodology()` and
+  `weather.city(code, slug, locale, { hourly: true })` in JS; `weather.city`, `weather.cities`,
+  `weather.ranking`, `weather.methodology` in Python.
+
+### Changed — plugin v1.0.4
+- Skills mention the week ranking (`period=week`) and the new endpoints.
+
 ### Changed — API 1.8.1: VanSky day and week scores
 - `van_score` (today) now equals the first forecast day (`forecast[0].van_score`): both are computed the same way,
   with sea temperature on every day and air quality on day 0. Before, today and the first day could differ by a point.

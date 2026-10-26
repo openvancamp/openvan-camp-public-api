@@ -163,6 +163,15 @@ const fr = await ov.weather.score("FR");
 console.log(fr.van_score);      // today's score 0-100, fr.score_label: "ideal" … "poor"
 console.log(fr.forecast[0]);    // today's detailed scores
 
+// One city as on its page: place in the country this week, per-day score breakdown
+const batumi = await ov.weather.city("GE", "batumi", "en");
+console.log(batumi.rank, batumi.week_score);
+
+// Ranking: cities of a country this week, countries of Europe
+const pt = await ov.weather.cities("PT", { limit: 10 });
+const europe = await ov.weather.ranking({ region: "europe", limit: 10 });
+const formula = await ov.weather.methodology(); // recompute the score yourself
+
 // What the weather is usually like in Batumi on 18 September (climate, not a forecast)
 const c = await ov.weather.cityClimate("GE", "batumi", { date: "09-18" });
 console.log(c.day?.temp_day_c, c.day?.precipitation_days_of_35, c.best_month);

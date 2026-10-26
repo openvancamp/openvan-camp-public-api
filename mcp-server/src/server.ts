@@ -364,7 +364,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Travel Weather In A City",
       description:
-        "How suitable the weather in one city or town is for travelling and sleeping in a campervan, as a 0-100 score for today and for the coming 7 days, with sleep, driving and solar scores and daily scores. Use this, not get_country_travel_weather, when the user names a place (Barcelona, Málaga, Alicante). Use it for the weather in one named city, town or place today, tomorrow or this week.",
+        "How suitable the weather in one city or town is for travelling and sleeping in a campervan, as a 0-100 score for today and for the coming 7 days, with the city's place among the cities of its country this week, comfortable days, the best stretch and the worst day, a 7-day forecast with day and night temperature and rain, today's score breakdown (thermal, sunshine, precipitation, wind), sleep, driving and solar scores and ready-made advice. Use this, not get_country_travel_weather, when the user names a place (Barcelona, Málaga, Alicante). Use it for the weather in one named city, town or place today, tomorrow or this week.",
       inputSchema: getCityWeatherInput,
       annotations: readOnlyAnnotations("Travel Weather In A City"),
       _meta: toolUiMeta(WIDGETS.weather, "Checking travel weather…", "Travel weather ready"),
@@ -388,7 +388,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Countries With The Best Travel Weather",
       description:
-        "List the N countries where today's weather is best for travelling by campervan, highest 0-100 travel score first. Use it when no country is named and someone asks where to go for warm or good weather right now — worldwide or in a region (region=europe…); with sort=warmest only when they literally ask where it is warmest or hottest (it ranks by temperature alone, so deserts come first; «warm and pleasant», «warm and dry» → the default score). These are today's conditions and the coming days, not a forecast for a later month: for «in November» say so.",
+        "List the N countries where the weather is best for travelling by campervan, highest 0-100 travel score first: today's score by default, or with period=week the score of the coming 7 days (the ranking used on OpenVan.camp). Use it when no country is named and someone asks where to go for warm or good weather right now — worldwide or in a region (region=europe…); with sort=warmest only when they literally ask where it is warmest or hottest (it ranks by temperature alone, so deserts come first; «warm and pleasant», «warm and dry» → the default score). These are today's conditions and the coming days, not a forecast for a later month: for «in November» say so.",
       inputSchema: { ...listVanSkyTopInput, locale: CARD_LOCALE },
       annotations: readOnlyAnnotations("Countries With The Best Travel Weather"),
       _meta: toolUiMeta(WIDGETS.bestWeather, "Ranking countries by weather…", "Best travel weather ready"),

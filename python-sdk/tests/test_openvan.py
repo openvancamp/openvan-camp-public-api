@@ -104,6 +104,18 @@ class OpenVanTest(unittest.TestCase):
         with mock.patch("openvan.client.urlopen", fake):
             self.assertEqual([c["code"] for c in OpenVan().weather.top(2)], ["B", "C"])
 
+    def test_weather_city_hourly_and_ranking(self):
+        fake, calls = respond({
+            "/api/vansky/weather/GE/batumi": {"data": {"rank": {"position": 10, "total": 32}}},
+            "/api/vansky/ranking": {"data": [{"rank": 1, "code": "CL"}]},
+        })
+        with mock.patch("openvan.client.urlopen", fake):
+            self.assertEqual(OpenVan().weather.city("ge", "batumi", hourly=True)["rank"]["position"], 10)
+            self.assertEqual(OpenVan().weather.ranking(region="europe", limit=5)[0]["code"], "CL")
+        self.assertEqual(parse_qs(urlparse(calls[0].full_url).query)["include"], ["hourly"])
+        q = parse_qs(urlparse(calls[1].full_url).query)
+        self.assertEqual((q["by"], q["region"], q["limit"]), (["week"], ["europe"], ["5"]))
+
     def test_climate_point_passes_lat_lng_and_date(self):
         fake, calls = respond({"/api/vansky/climate": {"period": "2021–2025", "day": {"date": "09-18"}}})
         with mock.patch("openvan.client.urlopen", fake):

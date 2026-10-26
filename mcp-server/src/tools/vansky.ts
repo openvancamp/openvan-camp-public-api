@@ -193,25 +193,56 @@ export async function getVanSkyWeather({ country_code, locale }: { country_code:
 // list_best_weather_countries — top N countries by van_score today
 // ------------------------------------------------------------------
 
+/** Южная Америка внутри региона americas API (остальное americas — Северная и Центральная Америка, Карибы). */
+const SOUTH_AMERICA = new Set(["AR", "BO", "BR", "CL", "CO", "EC", "GY", "PE", "PY", "SR", "UY", "VE", "GF", "FK"]);
+
+const REGIONS = ["world", "europe", "asia", "middle_east", "cis", "africa", "north_america", "south_america", "oceania"] as const;
+type Region = (typeof REGIONS)[number];
+
 export const listVanSkyTopInput = {
   limit: z.preprocess((v) => (typeof v === "number" ? Math.min(Math.max(Math.round(v), 1), 20) : v), z.number().int().min(1).max(20)).default(10).describe("How many top-scoring countries to return."),
   region: z
-    .enum(["world", "europe", "asia", "africa", "north_america", "south_america", "oceania"])
+    .preprocess((v) => (v === "americas" ? "north_america" : v), z.enum(REGIONS))
     .default("world")
-    .describe("Only countries of this region — «best weather in Europe». Default: world."),
+    .describe("Only countries of this region — «best weather in Europe». asia includes the Middle East; cis = Russia, the Caucasus and Central Asia. Default: world."),
+  period: z
+    .enum(["today", "week"])
+    .default("today")
+    .describe("today = today's score (default, «right now»); week = the score of the coming 7 days, the ranking used on OpenVan.camp — for «this week», «the coming days», «where to go next week»."),
   sort: z
     .enum(["score", "warmest"])
     .default("score")
     .describe("score = best overall travel weather (default, also for «warm and pleasant»); warmest = highest daytime temperature today — only for a literal «where is it warmest/hottest»."),
 };
 
-type Region = "world" | "europe" | "asia" | "africa" | "north_america" | "south_america" | "oceania";
+const RankingSchema = z.object({
+  data: z.array(
+    z.object({
+      code: z.string(),
+      name: z.string(),
+      url: z.string().nullable().optional(),
+      region: z.string().nullable().optional(),
+      van_score: z.number(),
+      score_label: z.string(),
+      week_score: z.number(),
+      week_label: z.string(),
+      temp_day: z.number().nullable().optional(),
+      temp_night: z.number().nullable().optional(),
+      weather_code: z.number().nullable().optional(),
+    })
+  ),
+});
 
-export async function listVanSkyTop({ limit, region = "world", sort = "score" }: { limit: number; region?: Region; sort?: "score" | "warmest" }) {
-  const raw = await apiGet("/api/vansky/weather");
-  const parsed = z
-    .object({ data: z.array(VanSkyCountrySchema), count: z.number().optional() })
-    .safeParse(raw);
+function inRegion(region: Region, apiRegion: string | null | undefined, code: string): boolean {
+  if (region === "world") return true;
+  if (region === "north_america") return apiRegion === "americas" && !SOUTH_AMERICA.has(code);
+  if (region === "south_america") return apiRegion === "americas" && SOUTH_AMERICA.has(code);
+  if (region === "asia") return apiRegion === "asia" || apiRegion === "middle_east";
+  return apiRegion === region;
+}
+
+export async function listVanSkyTop({ limit, region = "world", period = "today", sort = "score", locale }: { limit: number; region?: Region; period?: "today" | "week"; sort?: "score" | "warmest"; locale?: string }) {
+  const parsed = RankingSchema.safeParse(await apiGet("/api/vansky/ranking", { by: period, limit: 250, locale: locale ?? "en" }).catch(() => null));
 
   if (!parsed.success) {
     return {
@@ -220,39 +251,37 @@ export async function listVanSkyTop({ limit, region = "world", sort = "score" }:
     };
   }
 
+  const week = period === "week";
   const sorted = parsed.data.data
-    .filter((d) => region === "world" || d.region === region)
-    .filter((d) => sort !== "warmest" || d.weather?.temp_day != null)
-    .sort((a, b) => (sort === "warmest" ? (b.weather?.temp_day ?? 0) - (a.weather?.temp_day ?? 0) : b.van_score - a.van_score))
+    .filter((d) => inRegion(region, d.region, d.code.toUpperCase()))
+    .filter((d) => sort !== "warmest" || d.temp_day != null)
+    .sort((a, b) => (sort === "warmest" ? (b.temp_day ?? 0) - (a.temp_day ?? 0) : 0))
     .slice(0, limit);
   const rows = sorted
-    .map((d, i) => `  ${i + 1}. ${d.code.toUpperCase()}: travel score ${d.van_score}/100 (${d.score_label}), daytime ${d.weather?.temp_day ?? "—"}°C, night ${d.weather?.temp_night ?? "—"}°C, sleep comfort ${d.sleep_score}/100`)
+    .map((d, i) => `  ${i + 1}. ${d.name} (${d.code.toUpperCase()}): ${week ? "week" : "today"} ${week ? d.week_score : d.van_score}/100 (${week ? d.week_label : d.score_label}), ${week ? `today ${d.van_score}/100` : `week ${d.week_score}/100`}, daytime ${d.temp_day ?? "—"}°C, night ${d.temp_night ?? "—"}°C`)
     .join("\n");
 
-  const countries = await Promise.all(
-    sorted.map(async (d) => {
-      const ref = await countryRef(d.code);
-      return {
-        code: d.code.toUpperCase(),
-        name: ref?.name ?? d.code.toUpperCase(),
-        score: d.van_score,
-        label: d.score_label,
-        temp_day: d.weather?.temp_day ?? null,
-        temp_night: d.weather?.temp_night ?? null,
-        weather_code: d.weather?.weather_code ?? null,
-        url: vanskyUrl(ref),
-      };
-    })
-  );
+  const countries = sorted.map((d) => ({
+    code: d.code.toUpperCase(),
+    name: d.name,
+    score: week ? d.week_score : d.van_score,
+    label: week ? d.week_label : d.score_label,
+    today_score: d.van_score,
+    week_score: d.week_score,
+    temp_day: d.temp_day ?? null,
+    temp_night: d.temp_night ?? null,
+    weather_code: d.weather_code ?? null,
+    url: d.url ?? `${SITE}/en/vansky`,
+  }));
 
   return {
     content: [
       {
         type: "text" as const,
-        text: `Top ${sorted.length} countries ${sort === "warmest" ? "by daytime temperature" : "for vanlife weather"} today${region === "world" ? "" : ` in ${region}`}:\n\n${rows}`,
+        text: `Top ${sorted.length} countries ${sort === "warmest" ? "by daytime temperature today" : week ? "for vanlife weather over the coming 7 days (the OpenVan.camp ranking)" : "for vanlife weather today"}${region === "world" ? "" : ` in ${region}`}:\n\n${rows}\n\nHow the score is calculated: ${SITE}/api/vansky/methodology`,
       },
     ],
-    structuredContent: { countries, region, sort, url: `${SITE}/en/vansky`, units: { temperature: "°C" }, source: SOURCE },
+    structuredContent: { countries, region, period, sort, url: `${SITE}/en/vansky`, units: { temperature: "°C" }, source: SOURCE },
   };
 }
 
@@ -272,21 +301,49 @@ const CityWeatherSchema = z.object({
     country_name: z.string().nullable().optional(),
     url: z.string(),
     van_score: z.number(),
+    score_label: z.string().nullable().optional(),
     week_score: z.number().nullable().optional(),
+    week_label: z.string().nullable().optional(),
+    rank: z.object({ position: z.number(), total: z.number() }).nullable().optional(),
+    comfortable_days: z.number().nullable().optional(),
+    worst_day: z.object({ date: z.string(), van_score: z.number() }).nullable().optional(),
+    best_window: z.object({ from: z.string(), to: z.string(), avg_score: z.number() }).nullable().optional(),
     sleep_score: z.number().nullable().optional(),
     drive_score: z.number().nullable().optional(),
     solar_kwh: z.number().nullable().optional(),
+    awning_status: z.string().nullable().optional(),
+    condensation_risk: z.string().nullable().optional(),
     weather: z
       .object({
         temp_day: z.number().nullable().optional(),
         temp_night: z.number().nullable().optional(),
         weather_code: z.number().nullable().optional(),
         wind_gusts_max: z.number().nullable().optional(),
+        precip_prob_max: z.number().nullable().optional(),
       })
       .nullable()
       .optional(),
     marine: z.preprocess((v) => (Array.isArray(v) ? null : v), z.object({ sea_temp: z.number().nullable().optional() }).passthrough().nullable().optional()),
-    forecast: z.array(z.object({ van_score: z.number(), temp_day: z.number().nullable().optional() }).passthrough()).optional(),
+    recommendations: z.array(z.object({ type: z.string().nullable().optional(), text: z.string().nullable().optional() }).passthrough()).nullable().optional(),
+    forecast: z
+      .array(
+        z
+          .object({
+            date: z.string().optional(),
+            van_score: z.number(),
+            temp_day: z.number().nullable().optional(),
+            temp_night: z.number().nullable().optional(),
+            weather_code: z.number().nullable().optional(),
+            precip_sum: z.number().nullable().optional(),
+            precip_prob_max: z.number().nullable().optional(),
+            wind_gusts_max: z.number().nullable().optional(),
+            sub_scores: z.object({ thermal: z.number(), sunshine: z.number(), precipitation: z.number(), wind: z.number() }).nullable().optional(),
+            weighted_score: z.number().nullable().optional(),
+            adjustments: z.number().nullable().optional(),
+          })
+          .passthrough()
+      )
+      .optional(),
   }),
   updated_at: z.string().nullable().optional(),
 });
@@ -329,24 +386,43 @@ export async function getCityWeather({ city, country_code, locale }: { city: str
 
   const d = parsed.data.data;
   const w = d.weather ?? {};
-  const today = new Date();
-  const forecast = (d.forecast ?? []).slice(0, 7).map((f, i) => {
-    const day = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + i));
-    return { date: day.toISOString().slice(0, 10), score: f.van_score, label: labelOf(f.van_score), temp_day: f.temp_day ?? null, temp_night: null, weather_code: null };
-  });
+  const forecast = (d.forecast ?? []).slice(0, 7).map((f, i) => ({
+    date: f.date ?? new Date(Date.now() + i * 86400000).toISOString().slice(0, 10),
+    score: f.van_score,
+    label: labelOf(f.van_score),
+    temp_day: f.temp_day ?? null,
+    temp_night: f.temp_night ?? null,
+    weather_code: f.weather_code ?? null,
+    precip_mm: f.precip_sum ?? null,
+    precip_prob: f.precip_prob_max ?? null,
+    sub_scores: f.sub_scores ?? null,
+  }));
   const others = cities.filter((r) => r !== pick).slice(0, 3).map((r) => `${r.name} (${r.sub ?? r.flag})`);
+  const today = d.forecast?.[0];
+  const tips = (d.recommendations ?? []).map((r) => r.text).filter((t): t is string => !!t).slice(0, 5);
+  const c = (v: number | null | undefined) => (v == null ? "—" : `${Math.round(v)}°C`);
 
   const lines = [
-    `OpenVan.camp travel weather for ${d.city_name}, ${d.country_name ?? d.country_code} — ${labelOf(d.van_score)}`,
-    `  Today:       ${d.van_score}/100`,
-    d.week_score != null ? `  Next 7 days: ${d.week_score}/100` : null,
+    `OpenVan.camp travel weather for ${d.city_name}, ${d.country_name ?? d.country_code}`,
+    `  Today:       ${d.van_score}/100 (${d.score_label ?? labelOf(d.van_score)})`,
+    d.week_score != null ? `  Next 7 days: ${d.week_score}/100 (${d.week_label ?? labelOf(d.week_score)})` : null,
+    d.rank ? `  Place in the country this week: ${d.rank.position} of ${d.rank.total} cities` : null,
+    d.comfortable_days != null ? `  Comfortable days (60+): ${d.comfortable_days} of ${forecast.length}` : null,
+    d.best_window ? `  Best stretch: ${d.best_window.from} – ${d.best_window.to} (avg ${d.best_window.avg_score})` : null,
+    d.worst_day ? `  Worst day: ${d.worst_day.date} (${d.worst_day.van_score}/100)` : null,
+    today?.sub_scores
+      ? `  Today's breakdown: thermal ${today.sub_scores.thermal}, sunshine ${today.sub_scores.sunshine}, precipitation ${today.sub_scores.precipitation}, wind ${today.sub_scores.wind} → weighted ${today.weighted_score ?? "—"}, adjustments ${today.adjustments != null && today.adjustments >= 0 ? "+" : ""}${today.adjustments ?? "—"}`
+      : null,
     d.sleep_score != null ? `  Sleep score: ${d.sleep_score}/100` : null,
     d.drive_score != null ? `  Drive score: ${d.drive_score}/100` : null,
-    w.temp_day != null ? `  Day / night: ${Math.round(w.temp_day)}°C / ${w.temp_night != null ? Math.round(w.temp_night) + "°C" : "—"}` : null,
+    d.solar_kwh != null ? `  Solar:       ${d.solar_kwh} kWh/day` : null,
     d.marine?.sea_temp != null ? `  Sea:         ${Math.round(d.marine.sea_temp)}°C` : null,
-    forecast.length ? `  Daily scores: ${forecast.map((f) => f.score).join(", ")}` : null,
+    forecast.length
+      ? `\nForecast:\n${forecast.map((f) => `  ${f.date}: ${f.score}/100 (${f.label}), day ${c(f.temp_day)}, night ${c(f.temp_night)}${f.precip_mm ? `, rain ${f.precip_mm} mm` : ""}`).join("\n")}`
+      : null,
+    tips.length ? `\nAdvice:\n${tips.map((t) => `  - ${t}`).join("\n")}` : null,
     others.length ? `\nOther places with a similar name: ${others.join("; ")}` : null,
-    `\nDetails: ${d.url}`,
+    `\nDetails: ${d.url}\nHow the score is calculated: ${SITE}/api/vansky/methodology`,
   ].filter(Boolean);
 
   return {
@@ -356,19 +432,26 @@ export async function getCityWeather({ city, country_code, locale }: { city: str
       country: { code: d.country_code, name: d.country_name ?? d.country_code, slug: null },
       score: d.van_score,
       week_score: d.week_score ?? null,
-      label: labelOf(d.van_score),
+      label: d.score_label ?? labelOf(d.van_score),
+      week_label: d.week_label ?? (d.week_score != null ? labelOf(d.week_score) : null),
+      rank: d.rank ? { position: d.rank.position, total: d.rank.total } : null,
+      comfortable_days: d.comfortable_days ?? null,
+      worst_day: d.worst_day ?? null,
+      best_window: d.best_window ?? null,
       sleep_score: d.sleep_score ?? null,
       drive_score: d.drive_score ?? null,
       solar_kwh: d.solar_kwh ?? null,
       sea_temp: d.marine?.sea_temp ?? null,
-      awning: null,
-      condensation: null,
-      today: { temp_day: w.temp_day ?? null, temp_night: w.temp_night ?? null, precip_prob: null, wind_gusts: w.wind_gusts_max ?? null, weather_code: w.weather_code ?? null },
+      awning: d.awning_status ?? null,
+      condensation: d.condensation_risk ?? null,
+      today: { temp_day: w.temp_day ?? null, temp_night: w.temp_night ?? null, precip_prob: w.precip_prob_max ?? null, wind_gusts: w.wind_gusts_max ?? null, weather_code: w.weather_code ?? null },
       forecast,
+      advice: tips,
       updated_at: parsed.data.updated_at ?? null,
       locale: locale ?? null,
       units: { temperature: "°C", wind: "km/h" },
       url: d.url,
+      methodology: `${SITE}/api/vansky/methodology`,
       source: "OpenVan.camp (CC BY 4.0), weather: Open-Meteo",
     },
   };

@@ -58,7 +58,7 @@ If the `openvan` MCP tools are not available, call the REST API instead — the 
 | Public, school holidays, peak traffic days | `get_holidays` |
 | Is it safe now, disasters / wildfires near a place | `get_travel_hazards` / `get_active_fires` |
 | Sockets, voltage, campsite hook-up | `get_power_plugs` |
-| Weather for one city / a country / where to go for good weather | `get_city_travel_weather` / `get_country_travel_weather` / `list_best_weather_countries` |
+| Weather for one city / a country / where to go for good weather | `get_city_travel_weather` / `get_country_travel_weather` / `list_best_weather_countries` (`period=week` for this week: the OpenVan.camp ranking) |
 | Usual weather on a later date, sea temperature in a month, best month to go | `get_city_climate` (city or lat/lng; omit `date` for the 12 months) |
 | How expensive food is / compare / rank | `get_country_food_prices` / `compare_food_prices` / `rank_food_prices` |
 | Convert money | `get_currency_rate` |

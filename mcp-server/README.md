@@ -98,9 +98,9 @@ npx -y @openvancamp/mcp-server
 | `compare_fuel_prices` | Compare one fuel type across 2–10 countries |
 | `find_cheapest_fuel` | Top cheapest (or most expensive) countries by fuel type, filterable by region |
 | `get_country_travel_weather` | Campervan travel weather score (0-100), solar yield, 7-day forecast for one country |
-| `get_city_travel_weather` | Campervan travel weather of one city or town: today and the coming 7 days |
+| `get_city_travel_weather` | Campervan travel weather of one city or town: today and the coming 7 days, place among the cities of the country, comfortable days, worst day, today's score breakdown, advice |
 | `get_city_climate` | Typical weather on any day of the year in a city or at any point (ERA5 2021–2025): day/night temperature, precipitation days of 35, sea, solar, VanSky climate index, 12 months and the best month |
-| `list_best_weather_countries` | Top N countries with the best travel weather today, filterable by region, or sorted by warmth |
+| `list_best_weather_countries` | Top N countries with the best travel weather today or for the coming week (`period=week`, the site ranking), filterable by region, or sorted by warmth |
 | `list_events` | Vanlife events (expos, festivals, meetups) with filters |
 | `get_event` | Details for one event by slug |
 | `search_stories` | Vanlife news: headline, short summary and link to the story page on openvan.camp (7 languages) |

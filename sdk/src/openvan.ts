@@ -211,15 +211,43 @@ class WeatherResource {
   }
 
   /**
-   * Vanlife weather for one city: score today and for the coming 7 days, sleep / drive / solar.
-   * `citySlug` is the last part of the VanSky URL, e.g. "barcelona".
+   * Vanlife weather for one city, as on its page: score today and for the coming 7 days, place among
+   * the cities of the country (`rank`), per-day score breakdown (`sub_scores`, `weighted_score`,
+   * `adjustments`), worst day, best stretch, sleep / drive / solar, air quality, recommendations.
+   * `citySlug` is the last part of the VanSky URL, e.g. "barcelona". `hourly: true` adds 3-hour steps.
    */
-  async city(countryCode: string, citySlug: string, locale?: Locale): Promise<Record<string, unknown>> {
+  async city(
+    countryCode: string,
+    citySlug: string,
+    locale?: Locale,
+    options: { hourly?: boolean } = {}
+  ): Promise<Record<string, unknown>> {
     const res = await this.client.get<{ data: Record<string, unknown> }>(
       `/api/vansky/weather/${countryCode.toUpperCase()}/${encodeURIComponent(citySlug)}`,
-      { locale }
+      { locale, include: options.hourly ? "hourly" : undefined }
     );
     return res.data;
+  }
+
+  /** Cities of a country ranked by the VanSky score of the coming 7 days (`sort: "week"`, as on the site) or of today. */
+  async cities(
+    countryCode: string,
+    options: { sort?: "week" | "today"; limit?: number; offset?: number; locale?: Locale } = {}
+  ): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(`/api/vansky/weather/${countryCode.toUpperCase()}/cities`, options);
+  }
+
+  /** Countries ranked by the VanSky score of the coming 7 days (`by: "week"`, default) or of today, optionally in one region. */
+  async ranking(
+    options: { by?: "week" | "today"; region?: string; limit?: number; locale?: Locale } = {}
+  ): Promise<Record<string, unknown>[]> {
+    const res = await this.client.get<{ data: Record<string, unknown>[] }>("/api/vansky/ranking", options);
+    return res.data;
+  }
+
+  /** How the VanSky score is calculated: curves, weights, adjustments, week score — enough to recompute it. */
+  async methodology(): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>("/api/vansky/methodology");
   }
 
   /**

@@ -143,6 +143,33 @@ class Weather(_Resource):
         """Vanlife weather of one country: ``van_score`` 0–100, ``score_label``, 7-day ``forecast``."""
         return self.client.get(f"/api/vansky/weather/{code.upper()}")["data"]
 
+    def city(self, code: str, city_slug: str, locale: Optional[str] = None, hourly: bool = False) -> JSON:
+        """One city, as on its page: score today and for the coming 7 days, place among the cities of the
+        country (``rank``), per-day score breakdown, worst day, best stretch, air quality, recommendations.
+        ``hourly=True`` adds 3-hour steps.
+        """
+        params = {"locale": locale, "include": "hourly" if hourly else None}
+        return self.client.get(f"/api/vansky/weather/{code.upper()}/{quote(city_slug)}", params)["data"]
+
+    def cities(
+        self, code: str, sort: str = "week", limit: Optional[int] = None, offset: Optional[int] = None,
+        locale: Optional[str] = None,
+    ) -> JSON:
+        """Cities of a country ranked by the score of the coming 7 days (``sort="week"``, as on the site) or today."""
+        params = {"sort": sort, "limit": limit, "offset": offset, "locale": locale}
+        return self.client.get(f"/api/vansky/weather/{code.upper()}/cities", params)
+
+    def ranking(
+        self, by: str = "week", region: Optional[str] = None, limit: Optional[int] = None, locale: Optional[str] = None
+    ) -> List[JSON]:
+        """Countries ranked by the score of the coming 7 days (``by="week"``) or today, optionally in one region."""
+        params = {"by": by, "region": region, "limit": limit, "locale": locale}
+        return self.client.get("/api/vansky/ranking", params)["data"]
+
+    def methodology(self) -> JSON:
+        """How the VanSky score is calculated: curves, weights, adjustments, week score."""
+        return self.client.get("/api/vansky/methodology")
+
     def all(self) -> List[JSON]:
         """Every country with weather data (one request, ~1 MB)."""
         return self.client.get("/api/vansky/weather")["data"]

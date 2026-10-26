@@ -11,7 +11,8 @@ info:
     (UK FCDO travel advice level, GDACS natural disasters, NASA FIRMS active fires), power plugs and mains
     voltage by country (with campsite hook-up connector), customs rules on entry by car (verbatim official
     quotes), visa and border rules (including temporary vehicle import), currency rates, VanBasket food
-    price index data, VanSky weather suitability data (countries and cities), typical weather (climate)
+    price index data, VanSky weather suitability data (countries and cities, rankings of countries and
+    of the cities of a country, the score breakdown and the full methodology), typical weather (climate)
     for any day of the year at any point (ERA5 2021–2025: temperature, precipitation days, sky, sea temperature,
     solar radiation, best month), and license plates of the world (formats, region codes, validation,
     ready SVG/PNG plate images). No authentication is required. Data is CC BY 4.0; attribution is required:
@@ -21,7 +22,7 @@ info:
     POST /api/roadbook/from-places at 10/minute, GET /api/hazards/fires at 30/minute and GET /api/tolls/route
     at 20/minute (see X-RateLimit-Limit and X-RateLimit-Remaining response headers). Pass `?source=<integration-domain>`
     for attribution tracking.'
-  version: 1.8.1
+  version: 1.9.0
   termsOfService: https://openvan.camp/en/terms
   contact:
     name: OpenVan.camp
@@ -423,15 +424,93 @@ paths:
                 $ref: '#/components/schemas/VanSkyCountryResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/vansky/weather/{code}/cities:
+    get:
+      tags:
+      - VanSky
+      operationId: getVanSkyCityRanking
+      summary: Rank the cities of a country by VanSky score
+      description: All cities of a country ranked by the score of the coming 7 days (sort=week, the ranking
+        on the site) or of today (sort=today), with the place, daily scores, comfortable and rainy days,
+        temperatures, sea and solar. Cities whose forecast is more than 2 days old are left out, as on
+        the site. Up to 200 cities per request.
+      parameters:
+      - $ref: '#/components/parameters/CountryCode'
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - week
+          - today
+          default: week
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      - $ref: '#/components/parameters/Locale'
+      - $ref: '#/components/parameters/Source'
+      responses:
+        '200':
+          description: Ranked cities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/VanSkyCityRankEntry'
+                  meta:
+                    type: object
+                    properties:
+                      country_code:
+                        type: string
+                      sort:
+                        type: string
+                      total:
+                        type: integer
+                      offset:
+                        type: integer
+                      limit:
+                        type: integer
+                  updated_at:
+                    type: string
+                    nullable: true
+                  methodology:
+                    type: string
+                    format: uri
+                  _attribution:
+                    $ref: '#/components/schemas/Attribution'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/vansky/weather/{code}/{city}:
     get:
       tags:
       - VanSky
       operationId: getVanSkyCityWeather
-      summary: Get VanSky weather suitability for one city
-      description: 'Travel weather of one city or town: VanSky score for today and for the coming 7 days,
-        sleep, driving and solar scores, today''s weather and daily scores. Only precomputed data; find
-        the city slug with the VanSky URL (e.g. /en/vansky/spain/catalonia-region/barcelona → barcelona).'
+      summary: Get VanSky weather of one city, as on its page
+      description: 'Everything the city page shows: today''s score (van_score, today_score) and the score
+        of the coming 7 days (week_score), the city''s place among the cities of its country this week
+        (rank), comfortable days, the worst day and the best 3-day window, sleep, driving, solar and sea
+        scores, current weather with local sunrise and sunset, sea and air quality, recommendations as
+        text, and a 7-day forecast where every day has its score broken down (sub_scores, weighted_score,
+        adjustments). include=hourly adds the forecast in 3-hour steps and the daily sea temperature.
+        The formula is at /api/vansky/methodology. Only precomputed data; find the city slug with the
+        VanSky URL (e.g. /en/vansky/spain/catalonia-region/barcelona → barcelona) or with /api/vansky/weather/{code}/cities.'
       parameters:
       - $ref: '#/components/parameters/CountryCode'
       - name: city
@@ -457,10 +536,117 @@ paths:
           - pt
           - tr
           default: en
+      - name: include
+        in: query
+        required: false
+        description: hourly — add the 3-hour forecast and the daily sea temperature (cached for 1 hour).
+        schema:
+          type: string
+          enum:
+          - hourly
       - $ref: '#/components/parameters/Source'
       responses:
         '200':
-          description: VanSky city details
+          description: VanSky city
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/VanSkyCity'
+                  updated_at:
+                    type: string
+                    nullable: true
+                  source:
+                    type: string
+                  methodology:
+                    type: string
+                    format: uri
+                  _attribution:
+                    $ref: '#/components/schemas/Attribution'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/vansky/ranking:
+    get:
+      tags:
+      - VanSky
+      operationId: getVanSkyCountryRanking
+      summary: Rank countries by VanSky score
+      description: 'Countries ranked by the score of the coming 7 days (by=week) or of today (by=today):
+        a light list with the place, scores, labels, temperatures, sea and solar, instead of downloading
+        every country with /api/vansky/weather.'
+      parameters:
+      - name: by
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - week
+          - today
+          default: week
+      - name: region
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - europe
+          - asia
+          - africa
+          - americas
+          - oceania
+          - cis
+          - middle_east
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 250
+          default: 250
+      - $ref: '#/components/parameters/Locale'
+      - $ref: '#/components/parameters/Source'
+      responses:
+        '200':
+          description: Ranked countries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/VanSkyCountryRankEntry'
+                  meta:
+                    type: object
+                    additionalProperties: true
+                  updated_at:
+                    type: string
+                    nullable: true
+                  methodology:
+                    type: string
+                    format: uri
+                  _attribution:
+                    $ref: '#/components/schemas/Attribution'
+  /api/vansky/methodology:
+    get:
+      tags:
+      - VanSky
+      operationId: getVanSkyMethodology
+      summary: How the VanSky index is calculated
+      description: 'Machine-readable methodology: score labels, the four sub-scores with their curves
+        and weights, night adjustment, extreme caps, solar and sea bonuses, air quality and heat caps,
+        the week score, comfortable and rainy days, solar output, the country score, data sources and
+        units. Enough to reproduce a day score from the forecast fields of the city endpoint.'
+      parameters:
+      - $ref: '#/components/parameters/Source'
+      responses:
+        '200':
+          description: Methodology
           content:
             application/json:
               schema:
@@ -468,59 +654,9 @@ paths:
                 properties:
                   data:
                     type: object
-                    properties:
-                      code:
-                        type: string
-                        example: barcelona
-                      city_name:
-                        type: string
-                        example: Barcelona
-                      country_code:
-                        type: string
-                        example: ES
-                      country_name:
-                        type: string
-                        example: Spain
-                      url:
-                        type: string
-                        format: uri
-                      van_score:
-                        type: integer
-                        example: 96
-                      week_score:
-                        type: integer
-                        example: 88
-                      sleep_score:
-                        type: integer
-                      drive_score:
-                        type: integer
-                      solar_kwh:
-                        type: number
-                      weather:
-                        type: object
-                        additionalProperties: true
-                      marine:
-                        type: object
-                        additionalProperties: true
-                      forecast:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            van_score:
-                              type: integer
-                            temp_day:
-                              type: number
                     additionalProperties: true
-                  updated_at:
-                    type: string
-                    format: date-time
-                  source:
-                    type: string
                   _attribution:
                     $ref: '#/components/schemas/Attribution'
-        '404':
-          $ref: '#/components/responses/NotFound'
   /api/vansky/climate:
     get:
       tags:
@@ -3968,3 +4104,335 @@ components:
           example: Contains modified Copernicus Climate Change Service information (ERA5, CC BY 4.0)
         _attribution:
           $ref: '#/components/schemas/Attribution'
+    VanSkyForecastDayFull:
+      type: object
+      description: One forecast day, local to the city.
+      additionalProperties: true
+      properties:
+        date:
+          type: string
+          format: date
+        van_score:
+          type: integer
+          example: 89
+        score_label:
+          type: string
+          enum:
+          - ideal
+          - comfortable
+          - acceptable
+          - hard
+          - extreme
+        sub_scores:
+          type: object
+          description: Sub-scores before weights (see /api/vansky/methodology).
+          properties:
+            thermal:
+              type: integer
+            sunshine:
+              type: integer
+            precipitation:
+              type: integer
+            wind:
+              type: integer
+        weighted_score:
+          type: integer
+          description: round(thermal×0.35 + sunshine×0.25 + precipitation×0.25 + wind×0.15)
+        adjustments:
+          type: integer
+          description: 'van_score − weighted_score: night, extreme caps, solar and sea bonuses, air quality,
+            heat cap.'
+        temp_day:
+          type: number
+          nullable: true
+        temp_night:
+          type: number
+          nullable: true
+        feels_like_day:
+          type: number
+          nullable: true
+        feels_like_night:
+          type: number
+          nullable: true
+        humidity:
+          type: number
+          nullable: true
+        dew_point:
+          type: number
+          nullable: true
+        dew_point_mean:
+          type: number
+          nullable: true
+        weather_code:
+          type: integer
+          nullable: true
+          description: WMO weather code.
+        precip_sum:
+          type: number
+          nullable: true
+        precip_prob_max:
+          type: number
+          nullable: true
+        wind_max:
+          type: number
+          nullable: true
+        wind_gusts_max:
+          type: number
+          nullable: true
+        wind_dir:
+          type: number
+          nullable: true
+        shortwave_radiation_sum:
+          type: number
+          nullable: true
+          description: MJ/m²
+        solar_kwh:
+          type: number
+          nullable: true
+          description: kWh/day for a 500 W panel
+        sleep_score:
+          type: integer
+          nullable: true
+        drive_score:
+          type: integer
+          nullable: true
+        sea_temp:
+          type: number
+          nullable: true
+          description: Only with include=hourly, coastal cities.
+    VanSkyCity:
+      type: object
+      additionalProperties: true
+      properties:
+        code:
+          type: string
+          example: batumi
+        city_name:
+          type: string
+          example: Batumi
+        country_code:
+          type: string
+          example: GE
+        country_name:
+          type: string
+        url:
+          type: string
+          format: uri
+        is_coastal:
+          type: boolean
+        van_score:
+          type: integer
+          description: Score of today (forecast day 0).
+          example: 89
+        today_score:
+          type: integer
+          example: 89
+        score_label:
+          type: string
+        week_score:
+          type: integer
+          description: Score of the coming 7 days.
+          example: 71
+        week_label:
+          type: string
+        rank:
+          type: object
+          nullable: true
+          description: Place among the cities of the country this week, as on the site.
+          properties:
+            position:
+              type: integer
+              example: 10
+            total:
+              type: integer
+              example: 32
+            by:
+              type: string
+              example: week
+        comfortable_days:
+          type: integer
+          description: Days with a score ≥ 60 of the 7.
+        worst_day:
+          type: object
+          nullable: true
+          properties:
+            date:
+              type: string
+            van_score:
+              type: integer
+            score_label:
+              type: string
+        best_window:
+          type: object
+          nullable: true
+          description: Best 3 consecutive days, when the week has one.
+          properties:
+            from:
+              type: string
+            to:
+              type: string
+            avg_score:
+              type: integer
+        sleep_score:
+          type: integer
+          nullable: true
+        drive_score:
+          type: integer
+          nullable: true
+        solar_kwh:
+          type: number
+          nullable: true
+        solar_score:
+          type: integer
+          nullable: true
+        sea_score:
+          type: integer
+          nullable: true
+        awning_status:
+          type: string
+          nullable: true
+        condensation_risk:
+          type: string
+          nullable: true
+        drive_window:
+          type: string
+          nullable: true
+        weather:
+          type: object
+          additionalProperties: true
+          description: 'Today: temperatures, feels-like, humidity, dew point, wind, precipitation, cloud
+            cover, UV, sunrise and sunset in ISO 8601 with the local offset.'
+        marine:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Sea surface temperature and waves.
+        air_quality:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: European AQI, US AQI, PM2.5, PM10, ozone, NO2, dust, pollen (CAMS).
+        recommendations:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              type:
+                type: string
+                enum:
+                - success
+                - warning
+                - danger
+                - info
+              params: {}
+              text:
+                type: string
+                description: In the requested locale.
+        forecast:
+          type: array
+          items:
+            $ref: '#/components/schemas/VanSkyForecastDayFull'
+        hourly:
+          type: object
+          nullable: true
+          description: 'With include=hourly: date → list of 3-hour slots.'
+          additionalProperties:
+            type: array
+            items:
+              type: object
+              additionalProperties: true
+        fetched_at:
+          type: string
+          nullable: true
+    VanSkyCityRankEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+          example: 1
+        code:
+          type: string
+        city_name:
+          type: string
+        url:
+          type: string
+          format: uri
+        van_score:
+          type: integer
+        week_score:
+          type: integer
+        week_label:
+          type: string
+        comfortable_days:
+          type: integer
+        rain_days:
+          type: integer
+          description: Days with ≥ 1 mm or ≥ 50 % chance of precipitation.
+        daily_scores:
+          type: array
+          items:
+            type: integer
+        sleep_score:
+          type: integer
+          nullable: true
+        drive_score:
+          type: integer
+          nullable: true
+        solar_kwh:
+          type: number
+          nullable: true
+        is_coastal:
+          type: boolean
+        temp_day:
+          type: number
+          nullable: true
+        temp_night:
+          type: number
+          nullable: true
+        weather_code:
+          type: integer
+          nullable: true
+        sea_temp:
+          type: number
+          nullable: true
+    VanSkyCountryRankEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+          example: 1
+        code:
+          type: string
+          example: PT
+        name:
+          type: string
+        url:
+          type: string
+          format: uri
+        region:
+          type: string
+        van_score:
+          type: integer
+        score_label:
+          type: string
+        week_score:
+          type: integer
+        week_label:
+          type: string
+        temp_day:
+          type: number
+          nullable: true
+        temp_night:
+          type: number
+          nullable: true
+        weather_code:
+          type: integer
+          nullable: true
+        sea_temp:
+          type: number
+          nullable: true
+        solar_kwh:
+          type: number
+          nullable: true

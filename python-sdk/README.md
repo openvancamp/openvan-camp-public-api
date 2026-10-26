@@ -32,6 +32,11 @@ print(ov.tolls.route(["Rome", "Paris"], vehicle_class="van"))
 for c in ov.weather.top(5):
     print(c["code"], c["van_score"], c["score_label"])
 
+# Countries of Europe by the score of the coming week (the site ranking), one city with its place
+for c in ov.weather.ranking(region="europe", limit=5):
+    print(c["rank"], c["name"], c["week_score"])
+print(ov.weather.city("GE", "batumi")["rank"])
+
 # Typical weather (climate) in Batumi on 18 September and the best month to go
 batumi = ov.weather.city_climate("GE", "batumi", date="09-18")
 print(batumi["day"]["temp_day_c"], batumi["day"]["precipitation_days_of_35"], batumi["best_month"])

@@ -19,7 +19,7 @@ Full contract: <https://openvan.camp/docs.openapi>.
 | `get_travel_hazards` | `GET /api/hazards/countries/{code}` |
 | `get_active_fires` | `GET /api/hazards/fires?bbox=west,south,east,north` (up to 10°×10°) |
 | `get_power_plugs` | `GET /api/electricity/countries/{code}` |
-| `get_country_travel_weather`, `get_city_travel_weather`, `list_best_weather_countries` | `GET /api/vansky/weather/{code}`, `/api/vansky/weather/{code}/{city}`, `/api/vansky/weather` |
+| `get_country_travel_weather`, `get_city_travel_weather`, `list_best_weather_countries` | `GET /api/vansky/weather/{code}`, `/api/vansky/weather/{code}/{city}`, `/api/vansky/ranking` (`/api/vansky/weather/{code}/cities` for the cities of a country, `/api/vansky/methodology` for the formula) |
 | `get_city_climate` | `GET /api/vansky/climate?lat=&lng=&date=MM-DD`, `/api/vansky/climate/{code}/{city}?date=MM-DD` |
 | `get_country_food_prices`, `compare_food_prices` | `GET /api/vanbasket/countries/{code}`, `/api/vanbasket/compare?from=DE&to=TR` |
 | `get_currency_rate` | `GET /api/currency/rates` (EUR-based: `amount / rates[FROM] * rates[TO]`) |

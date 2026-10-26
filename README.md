@@ -68,7 +68,10 @@ The OpenAPI spec at `/docs.openapi` is generated from the live codebase and is t
 | `GET /api/vanbasket/countries/{code}` | Single country + historical snapshots | — |
 | `GET /api/vansky/weather` | Vanlife weather suitability scores (0–100) with 7-day forecast | 160+ countries |
 | `GET /api/vansky/weather/{code}` | One country, with marine and solar data | — |
-| `GET /api/vansky/weather/{code}/{city}` | One city: score today and for the coming 7 days | — |
+| `GET /api/vansky/weather/{code}/{city}` | One city as on its page: today and the week, place in the country, per-day score breakdown, worst day, air quality, recommendations (`include=hourly` for 3-hour steps) | — |
+| `GET /api/vansky/weather/{code}/cities` | Cities of a country ranked by the week score (as on the site) or today | — |
+| `GET /api/vansky/ranking` | Countries ranked by the week score or today, by region | 160+ countries |
+| `GET /api/vansky/methodology` | How the VanSky score is calculated: curves, weights, adjustments — recompute it yourself | — |
 | `GET /api/vansky/climate?lat=&lng=&date=` | Typical weather on any day of the year anywhere (ERA5 2021–2025): temperature, precipitation days, sky, sea, solar, VanSky index, months, best month | worldwide |
 | `GET /api/vansky/climate/{code}/{city}` | The same for a VanSky city | — |
 | `GET /api/visa/check?passport=RU&destination=TR` | Entry rules: entry mode, length of stay, how days are counted, vehicle import | 199 destinations |
