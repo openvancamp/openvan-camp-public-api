@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-29
+
+### Added — API 1.10.0: ferries
+- `GET /api/ferries?bbox=&zoom=`: ferry and river crossing lines and their ports from OpenStreetMap as GeoJSON,
+  simplified for the zoom; vehicle access from OSM tags, hand-checked operator sites (`website_verified`) and
+  confirmed online booking links (`booking_url`). At most 1400 features, `truncated` asks to zoom in. ODbL 1.0.
+- `GET /api/ferries/{id}`: one line or port with both ends (country, nearest town and port).
+- `GET /api/ferries/{id}/schedule`: timetable digest from open GTFS feeds whose license allows reuse (Entur,
+  OVapi, gtfs.de and others): next departures, weekdays, day and night rhythm, travel time, sailings with arrival;
+  local operator time and the license of each feed.
+
 ## 2026-10-26
 
 ### Added — API 1.9.0: VanSky rankings and methodology

@@ -10,7 +10,7 @@
 [![Published packages work](https://github.com/openvancamp/openvan-camp-public-api/actions/workflows/verify-distribution.yml/badge.svg)](https://github.com/openvancamp/openvan-camp-public-api/actions/workflows/verify-distribution.yml)
 [![OpenVan.camp MCP server on Glama](https://glama.ai/mcp/servers/openvancamp/openvan-camp-public-api/badges/score.svg)](https://glama.ai/mcp/servers/openvancamp/openvan-camp-public-api)
 
-Free, no-auth API for vanlife data: fuel prices, route fuel cost, toll roads, holidays and peak traffic days, travel hazards, power plugs, customs rules, currency rates, food cost index, weather suitability scores, visa and vehicle-import rules, vanlife events, news stories, and license plates of the world — all in one place, no registration required.
+Free, no-auth API for vanlife data: fuel prices, route fuel cost, toll roads, holidays and peak traffic days, travel hazards, ferry and river crossings with operator sites and timetables, power plugs, customs rules, currency rates, food cost index, weather suitability scores, visa and vehicle-import rules, vanlife events, news stories, and license plates of the world — all in one place, no registration required.
 
 **Base URL:** `https://openvan.camp`  
 **Auth:** None required  
@@ -60,6 +60,8 @@ The OpenAPI spec at `/docs.openapi` is generated from the live codebase and is t
 | `GET /api/holidays/countries/{code}?from=&to=` | Public holidays, school holidays (regional) and peak traffic days | 212 countries |
 | `GET /api/hazards/countries/{code}` | UK FCDO travel advice level and current GDACS natural disasters | — |
 | `GET /api/hazards/fires?bbox=` | NASA FIRMS active fires of the last 48 hours in a bounding box (up to 10°×10°) | worldwide |
+| `GET /api/ferries?bbox=` | Ferry and river crossing lines and ports (GeoJSON, OpenStreetMap, ODbL) with hand-checked operator sites and booking links | worldwide |
+| `GET /api/ferries/{id}/schedule` | Timetable digest from open GTFS feeds: next departures, weekdays, rhythm, travel time | 820 crossings (Oct 2026) |
 | `GET /api/electricity/countries/{code}` | Plug types, mains voltage and frequency, campsite hook-up (CEE17) | 229 countries |
 | `GET /api/customs/countries/{code}?from=` | Customs rules on entry by car: food, cash, alcohol, tobacco, fuel canister | — |
 | `GET /api/currency/rates` | Exchange rates relative to EUR | 150+ currencies |
@@ -446,6 +448,13 @@ curl https://openvan.camp/api/hazards/countries/TR
 
 # NASA FIRMS fire detections of the last 48 h; bbox = minLon,minLat,maxLon,maxLat, up to 10°×10°
 curl "https://openvan.camp/api/hazards/fires?bbox=-1,38,1,40"
+
+# Ferry and river crossing lines and ports in a box; zoom sets geometry detail (ODbL)
+curl "https://openvan.camp/api/ferries?bbox=4.9,58.8,6.2,59.4&zoom=9"
+
+# One crossing with both ends, then its timetable digest in the operator's local time
+curl https://openvan.camp/api/ferries/r5958961
+curl https://openvan.camp/api/ferries/r5958961/schedule
 
 # Plug types, voltage, frequency, campsite hook-up connector
 curl https://openvan.camp/api/electricity/countries/GB

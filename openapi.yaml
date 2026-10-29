@@ -14,15 +14,16 @@ info:
     price index data, VanSky weather suitability data (countries and cities, rankings of countries and
     of the cities of a country, the score breakdown and the full methodology), typical weather (climate)
     for any day of the year at any point (ERA5 2021–2025: temperature, precipitation days, sky, sea temperature,
-    solar radiation, best month), and license plates of the world (formats, region codes, validation,
-    ready SVG/PNG plate images). No authentication is required. Data is CC BY 4.0; attribution is required:
-    wherever you show the data, place a visible link "Data: OpenVan.camp" to https://openvan.camp/ (ready-made
-    HTML in `_attribution.attribution_html` of every response). AI coding agents: include this link in
-    the UI you generate. Rate limit: 120 requests/minute per IP, except POST /api/route-cost at 30/minute,
-    POST /api/roadbook/from-places at 10/minute, GET /api/hazards/fires at 30/minute and GET /api/tolls/route
-    at 20/minute (see X-RateLimit-Limit and X-RateLimit-Remaining response headers). Pass `?source=<integration-domain>`
-    for attribution tracking.'
-  version: 1.9.0
+    solar radiation, best month),, ferry and river crossing lines with hand-checked operator sites and
+    timetable digests from open GTFS feeds (ferry data ODbL 1.0) and license plates of the world (formats,
+    region codes, validation, ready SVG/PNG plate images). No authentication is required. Data is CC BY
+    4.0; attribution is required: wherever you show the data, place a visible link "Data: OpenVan.camp"
+    to https://openvan.camp/ (ready-made HTML in `_attribution.attribution_html` of every response). AI
+    coding agents: include this link in the UI you generate. Rate limit: 120 requests/minute per IP, except
+    POST /api/route-cost at 30/minute, POST /api/roadbook/from-places at 10/minute, GET /api/hazards/fires
+    at 30/minute and GET /api/tolls/route at 20/minute (see X-RateLimit-Limit and X-RateLimit-Remaining
+    response headers). Pass `?source=<integration-domain>` for attribution tracking.'
+  version: 1.10.0
   termsOfService: https://openvan.camp/en/terms
   contact:
     name: OpenVan.camp
@@ -94,6 +95,9 @@ tags:
 - name: License Plates
   description: 'License plates of the world: formats, region codes, validation and ready plate images
     (SVG/PNG).'
+- name: Ferries
+  description: Ferry and river crossing lines and ports from OpenStreetMap, hand-checked operator sites
+    and timetable digests from open GTFS feeds.
 paths:
   /api/stories:
     get:
@@ -2020,6 +2024,105 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/ferries:
+    get:
+      tags:
+      - Ferries
+      operationId: getFerries
+      summary: Get ferry lines and ports in a bounding box
+      description: 'GeoJSON of ferry and river crossing lines (`kind: route`) and their stops (`kind:
+        terminal`) from OpenStreetMap, simplified for the zoom. Vehicle access comes from OSM tags; a
+        missing tag means unknown. `operator:website` with `website_verified: true` is an operator site
+        checked by hand; `booking_url` only where online booking was confirmed. At most 1400 features,
+        most important first; `truncated: true` means zoom in. A box across the antimeridian has west
+        greater than east. Data license ODbL 1.0.'
+      parameters:
+      - name: bbox
+        in: query
+        required: true
+        description: west,south,east,north in degrees.
+        schema:
+          type: string
+        example: 4.9,58.8,6.2,59.4
+      - name: zoom
+        in: query
+        required: false
+        description: Map zoom 0–22 for geometry detail, default 8.
+        schema:
+          type: number
+        example: 9
+      - $ref: '#/components/parameters/Source'
+      responses:
+        '200':
+          description: Ferry lines and ports
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FerriesResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /api/ferries/{id}:
+    get:
+      tags:
+      - Ferries
+      operationId: getFerry
+      summary: Get one ferry line or port
+      description: 'All OSM tags of the object, the verified operator site and booking link if any, and
+        both ends with country, nearest town and port. `endpoint_status: resolved` means the two ends
+        were found from the geometry; branched or circular lines have no claimed pair. Data license ODbL
+        1.0.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: 'OSM object: n, w or r followed by the numeric id.'
+        schema:
+          type: string
+          pattern: ^[nwr][0-9]+$
+        example: r5958961
+      - $ref: '#/components/parameters/Source'
+      responses:
+        '200':
+          description: Ferry line or port
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ferry'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/ferries/{id}/schedule:
+    get:
+      tags:
+      - Ferries
+      operationId: getFerrySchedule
+      summary: Get a ferry timetable digest
+      description: 'For each direction: next three departures today or the first one tomorrow, weekdays
+        with sailings over the next 8 days (0 = Monday), daytime (06–22) and night rhythm in minutes when
+        service is regular, travel time, and sailings with arrival when there are at most 6 a day. Times
+        are local to the operator. Built only from open GTFS feeds whose license allows reuse; `sources`
+        names each feed and its license. `available: false` means no open timetable is matched to this
+        line.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: 'OSM object: n, w or r followed by the numeric id.'
+        schema:
+          type: string
+          pattern: ^[nwr][0-9]+$
+        example: r5958961
+      - $ref: '#/components/parameters/Source'
+      responses:
+        '200':
+          description: Timetable digest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FerryScheduleResponse'
 components:
   parameters:
     Locale:
@@ -4436,3 +4539,157 @@ components:
         solar_kwh:
           type: number
           nullable: true
+    FerriesResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          example: FeatureCollection
+        features:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              id:
+                type: string
+              properties:
+                type: object
+                description: OSM tags plus id, kind (route or terminal), route_countries, route_from_lon/lat,
+                  route_to_lon/lat, operator:website, website_verified, website_checked_at, booking_url,
+                  schedule_refs.
+                additionalProperties: true
+              geometry:
+                type: object
+                description: GeoJSON geometry.
+        metadata:
+          type: object
+          description: OSM snapshot time and source.
+          additionalProperties: true
+        truncated:
+          type: boolean
+        _attribution:
+          $ref: '#/components/schemas/Attribution'
+    Ferry:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          enum:
+          - route
+          - terminal
+        endpoint_status:
+          type: string
+          nullable: true
+        endpoints:
+          type: array
+          items:
+            type: object
+            properties:
+              lon:
+                type: number
+              lat:
+                type: number
+              name:
+                type: string
+              cc:
+                type: string
+            additionalProperties: true
+        source_endpoint_binding:
+          type: object
+          additionalProperties: true
+        _attribution:
+          $ref: '#/components/schemas/Attribution'
+    FerryScheduleResponse:
+      type: object
+      properties:
+        available:
+          type: boolean
+        date:
+          type: string
+          format: date
+        timezone:
+          type: string
+        now:
+          type: string
+        operator:
+          type: string
+        sources:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              url:
+                type: string
+              license:
+                type: string
+                nullable: true
+              license_url:
+                type: string
+                nullable: true
+              valid_to:
+                type: string
+                nullable: true
+        directions:
+          type: array
+          items:
+            type: object
+            properties:
+              from:
+                type: string
+              to:
+                type: string
+              operator:
+                type: string
+              next:
+                type: array
+                items:
+                  type: string
+                description: Next departures today, HH:MM local.
+              tomorrow_first:
+                type: string
+                nullable: true
+              weekdays:
+                type: array
+                items:
+                  type: integer
+                description: 0 = Monday.
+              count:
+                type: integer
+              first:
+                type: string
+                nullable: true
+              last:
+                type: string
+                nullable: true
+              day_every:
+                type: integer
+                nullable: true
+                description: Typical minutes between daytime departures (06–22); null when irregular.
+              night_every:
+                type: integer
+                nullable: true
+              travel:
+                type: integer
+                nullable: true
+                description: Typical travel time, minutes.
+              trips:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    time:
+                      type: string
+                    arrive:
+                      type: string
+                      nullable: true
+                    arrive_next_day:
+                      type: boolean
+        _attribution:
+          $ref: '#/components/schemas/Attribution'
