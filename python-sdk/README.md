@@ -1,7 +1,7 @@
 # openvan — Python client for the OpenVan.camp API
 
-Free vanlife & RV travel data in Python: fuel prices in 160+ countries, toll roads, visa and
-vehicle-import rules, public and school holidays, travel hazards and wildfires, customs rules,
+Free vanlife & RV travel data in Python: whole-trip roadbooks, fuel prices in 170+ countries, toll roads, ferry
+crossings and timetables, visa and vehicle-import rules, public and school holidays, travel hazards and wildfires, customs rules,
 power plugs, weather suitability scores, food cost index, currency rates, events, news and
 license plates of the world.
 
@@ -43,6 +43,14 @@ print(batumi["day"]["temp_day_c"], batumi["day"]["precipitation_days_of_35"], ba
 
 # School holidays in Germany this autumn, by federal state
 ov.holidays.country("DE", from_="2026-10-01", to="2026-12-31", kind="school")
+
+# Ferries in the Tyrrhenian Sea (OpenStreetMap, ODbL) and the next departures of one line
+lines = [f["properties"] for f in ov.ferries.window((8, 38, 16, 42), zoom=6)["features"] if f["properties"]["kind"] == "route"]
+print(ov.ferries.schedule("r5958961")["directions"][0]["next"])
+
+# A whole trip plan: route, days, budget and rules for every country (waits up to 60 s)
+trip = ov.roadbook.plan(["Munich", "Venice"], inputs={"travelers": ["DE"]})
+print("https://openvan.camp" + trip["url"])
 ```
 
 ### With pandas

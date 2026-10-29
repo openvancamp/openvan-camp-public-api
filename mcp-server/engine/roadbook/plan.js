@@ -973,6 +973,10 @@ export function buildPlan(payload, inputs, visa, env) {
             // Условия относятся и к безвизовому въезду, включая остальных пассажиров.
             vrow.entryNotes = [...new Set(res.filter(x => !['home', 'residence'].includes(x.t.kind)).map(x => x.t.row?.note).filter(Boolean))];
             vrow.lines = [...new Set([...vrow.lines, ...vrow.entryNotes])];
+            // Каким паспортом въезжать: безвиз не значит «по внутреннему» (россиянин в Грузию).
+            const documents = res.filter(x => x.t.row?.document_label && !['home', 'residence'].includes(x.t.kind))
+                .map(x => (travelers.length > 1 ? `${fmt.countryName(x.passport)}: ` : '') + x.t.row.document_label);
+            vrow.lines.push(...new Set(documents));
             if (perPerson) {
                 vrow.lines.push(perPerson);
             }

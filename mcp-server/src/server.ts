@@ -70,6 +70,7 @@ import {
   getTravelHazardsInput,
 } from "./tools/hazards.js";
 import { getPowerPlugs, getPowerPlugsInput } from "./tools/electricity.js";
+import { findFerries, findFerriesInput, getFerrySchedule, getFerryScheduleInput } from "./tools/ferries.js";
 import { getCustomsRules, getCustomsRulesInput } from "./tools/customs.js";
 import { getRoadbookBuildStatus, planRoadTrip, planRoadTripInput, roadbookBuildStatusInput } from "./tools/trip.js";
 import { registerWidgets, toolUiMeta, WIDGETS } from "./ui/widgets.js";
@@ -604,6 +605,32 @@ export function createServer(host: HostKind = "other"): McpServer {
       _meta: toolUiMeta(WIDGETS.country, "Checking power plugs…", "Power plugs ready"),
     },
     withAttribution(getPowerPlugs)
+  );
+
+  // Ferries and river crossings
+  server.registerTool(
+    "find_ferries",
+    {
+      title: "Ferry Crossings In An Area",
+      description:
+        "Ferry and river crossing lines in a bounding box from OpenStreetMap: name, operator, countries, whether cars are carried, crossing time, the operator site checked by hand and a booking link where confirmed, and whether an open timetable exists. bbox is west,south,east,north in degrees — longitude first (Adriatic ≈ 12,39,20,46). Narrow with query (port or operator) or country_code. Use it for which ferries go to an island or across a sea, strait or river, and to get the id for get_ferry_schedule.",
+      inputSchema: { ...findFerriesInput, locale: CARD_LOCALE },
+      annotations: readOnlyAnnotations("Ferry Crossings In An Area"),
+      _meta: toolUiMeta(WIDGETS.country, "Finding ferries…", "Ferries ready"),
+    },
+    withAttribution(withCardLocale(findFerries))
+  );
+  server.registerTool(
+    "get_ferry_schedule",
+    {
+      title: "Ferry Timetable",
+      description:
+        "One ferry line by id from find_ferries: both ends with country, operator site and booking link, and a timetable digest from open GTFS feeds — next departures today in local time, sailings per day, daytime and night rhythm, weekdays over the next 8 days, crossing time. available: false means no open timetable is matched, not that the ferry does not run. Use it for when the next ferry leaves, how often it runs and how long the crossing takes.",
+      inputSchema: { ...getFerryScheduleInput, locale: CARD_LOCALE },
+      annotations: readOnlyAnnotations("Ferry Timetable"),
+      _meta: toolUiMeta(WIDGETS.country, "Checking the ferry timetable…", "Timetable ready"),
+    },
+    withAttribution(withCardLocale(getFerrySchedule))
   );
 
   // Customs

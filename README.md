@@ -24,7 +24,7 @@ Free, no-auth API for vanlife data: fuel prices, route fuel cost, toll roads, ho
 
 **Daily CSV snapshots:** [`openvancamp/openvan-travel-data`](https://github.com/openvancamp/openvan-travel-data) — fuel prices, exchange rates, food cost index and weather scores as CSV/JSON, one commit a day, with history.
 
-**MCP Server (for AI agents):** [`mcp-server/`](./mcp-server) — 30 read-only tools with interactive cards in Claude and ChatGPT (incl. `plan_road_trip` — a whole-trip roadbook), hosted at `https://mcp.openvan.camp/mcp`, or locally `npx -y @openvancamp/mcp-server` for Claude Desktop / Cursor / Windsurf. [Install docs →](./mcp-server/README.md) · [AI agents guide →](https://openvan.camp/ai?utm_source=github&utm_medium=referral&utm_campaign=public-api-repo)
+**MCP Server (for AI agents):** [`mcp-server/`](./mcp-server) — 32 read-only tools with interactive cards in Claude and ChatGPT (incl. `plan_road_trip` — a whole-trip roadbook), hosted at `https://mcp.openvan.camp/mcp`, or locally `npx -y @openvancamp/mcp-server` for Claude Desktop / Cursor / Windsurf. [Install docs →](./mcp-server/README.md) · [AI agents guide →](https://openvan.camp/ai?utm_source=github&utm_medium=referral&utm_campaign=public-api-repo)
 
 **Gemini CLI extension:** install this repository with `gemini extensions install https://github.com/openvancamp/openvan-camp-public-api`. The root [`gemini-extension.json`](./gemini-extension.json) connects Gemini CLI directly to the hosted OpenVan.camp MCP server; no API key is required.
 
@@ -51,18 +51,18 @@ The OpenAPI spec at `/docs.openapi` is generated from the live codebase and is t
 
 | Endpoint | Description | Coverage |
 |----------|-------------|----------|
-| `GET /api/fuel/prices` | Retail fuel prices (gasoline, diesel, LPG, E85) | 160+ countries |
+| `GET /api/fuel/prices` | Retail fuel prices (gasoline, diesel, LPG, E85) | 170+ countries |
 | `POST /api/route-cost` | Fuel cost for a route of 2–10 waypoints, per-country prices | — |
 | `POST /api/roadbook/from-places` | Whole-trip roadbook from 2–10 place names: day-by-day plan, budget, per-country entry and vehicle rules; returns a shareable page | — |
 | `GET /api/roadbook/{code}/status` | Build status of a roadbook (poll until `ready`) | — |
-| `GET /api/tolls/countries` | Toll roads by country: payment system, per-km rates by vehicle class, vignettes | 84 countries |
+| `GET /api/tolls/countries` | Toll roads by country: payment system, per-km rates by vehicle class, vignettes | 80+ countries |
 | `GET /api/tolls/route` | Toll cost for a route of 2–10 place names (car, van, heavy), EUR range | — |
-| `GET /api/holidays/countries/{code}?from=&to=` | Public holidays, school holidays (regional) and peak traffic days | 212 countries |
+| `GET /api/holidays/countries/{code}?from=&to=` | Public holidays, school holidays (regional) and peak traffic days | 210+ countries |
 | `GET /api/hazards/countries/{code}` | UK FCDO travel advice level and current GDACS natural disasters | — |
 | `GET /api/hazards/fires?bbox=` | NASA FIRMS active fires of the last 48 hours in a bounding box (up to 10°×10°) | worldwide |
 | `GET /api/ferries?bbox=` | Ferry and river crossing lines and ports (GeoJSON, OpenStreetMap, ODbL) with hand-checked operator sites and booking links | worldwide |
 | `GET /api/ferries/{id}/schedule` | Timetable digest from open GTFS feeds: next departures, weekdays, rhythm, travel time | 820 crossings (Oct 2026) |
-| `GET /api/electricity/countries/{code}` | Plug types, mains voltage and frequency, campsite hook-up (CEE17) | 229 countries |
+| `GET /api/electricity/countries/{code}` | Plug types, mains voltage and frequency, campsite hook-up (CEE17) | 220+ countries |
 | `GET /api/customs/countries/{code}?from=` | Customs rules on entry by car: food, cash, alcohol, tobacco, fuel canister | — |
 | `GET /api/currency/rates` | Exchange rates relative to EUR | 150+ currencies |
 | `GET /api/vanbasket/countries` | Food price index relative to world average (100 = world avg) | 90+ countries |
@@ -86,6 +86,7 @@ The OpenAPI spec at `/docs.openapi` is generated from the live codebase and is t
 | `GET /api/stories` | News stories aggregated from 200+ publishers | 31,000+ stories |
 | `GET /api/story/{slug}` | Full story with all source articles and direct links | — |
 | `GET /api/news/search?q=...` | Semantic search over stories | — |
+| `GET /api/news/digest` | Today's news digest | — |
 | `GET /api/plates` | License plates of the world: formats, region codes, example plates | 199 countries |
 | `GET /api/plates/{code}/types` | Plate types of a country (private, taxi, motorcycle, diplomatic…); empty where not broken down | — |
 | `GET /api/plates/{code}/plate.svg` | Ready plate image (also `.png`) — drop into `<img src>` | — |
@@ -521,6 +522,8 @@ Data: <a href="https://openvan.camp/">OpenVan.camp</a> (CC BY 4.0)
 ```
 
 The same snippet comes in every response as `_attribution.attribution_html`, and in the `X-Attribution-Required` response header.
+
+**Ferries are the exception:** lines and ports from `/api/ferries` are an OpenStreetMap derivative under [ODbL](https://opendatacommons.org/licenses/odbl/) — credit "© OpenStreetMap contributors" as well, and timetables carry the license of their GTFS feed (`_attribution` and `sources` name it).
 
 **Building with an AI coding agent?** Tell it to keep this link in the UI it generates — or just let it read `_attribution.instructions` from any response.
 

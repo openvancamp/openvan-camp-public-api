@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import time
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 from urllib.parse import quote
 
@@ -46,6 +47,8 @@ class OpenVan:
         self.hazards = Hazards(self.client)
         self.electricity = Electricity(self.client)
         self.customs = Customs(self.client)
+        self.roadbook = Roadbook(self.client)
+        self.ferries = Ferries(self.client)
 
 
 class _Resource:
@@ -225,6 +228,10 @@ class Stories(_Resource):
         """Semantic search over stories."""
         return self.client.get("/api/news/search", {"q": query, **options})
 
+    def digest(self, locale: Optional[str] = None) -> JSON:
+        """Today's news digest."""
+        return self.client.get("/api/news/digest", {"locale": locale})
+
 
 class Tolls(_Resource):
     def countries(self, locale: Optional[str] = None) -> JSON:
@@ -373,3 +380,54 @@ class Customs(_Resource):
             f"/api/customs/countries/{code.upper()}",
             {"from": from_country.upper() if from_country else None, "locale": locale},
         )
+
+
+class Roadbook(_Resource):
+    def create(self, places: Sequence[str], locale: str = "en", name: Optional[str] = None, inputs: Optional[JSON] = None) -> JSON:
+        """Create a roadbook from 2–10 place names — the same trip plan as the OpenVan roadbook wizard.
+
+        Identical requests return the same roadbook. The route is built in the background: use
+        :meth:`status` or :meth:`plan` to wait for it.
+        """
+        return self.client.post(
+            "/api/roadbook/from-places",
+            {"places": list(places), "locale": locale, "name": name or " — ".join(places)[:80], "inputs": inputs or {}},
+        )
+
+    def status(self, code: str) -> JSON:
+        """Build status of a roadbook: ``pending``, ``building``, ``ready`` or ``failed``."""
+        return self.client.get(f"/api/roadbook/{quote(code)}/status")
+
+    def plan(self, places: Sequence[str], timeout: float = 60.0, **options: Any) -> JSON:
+        """Create a roadbook and wait until its route is built (default up to 60 s).
+
+        Open ``https://openvan.camp`` + ``url`` of the result for the full plan.
+        """
+        created = self.create(places, **options)
+        deadline = time.monotonic() + timeout
+        status = created.get("status")
+        while status not in ("ready", "failed") and time.monotonic() < deadline:
+            time.sleep(1.5)
+            status = self.status(created["code"])["status"]
+        return {**created, "status": status}
+
+
+class Ferries(_Resource):
+    def window(self, bbox: Tuple[float, float, float, float], zoom: Optional[float] = None) -> JSON:
+        """Ferry and river crossing lines and ports in ``(min_lon, min_lat, max_lon, max_lat)`` as GeoJSON.
+
+        OpenStreetMap data (ODbL). ``zoom`` (0–22, default 8) sets geometry detail; at most 1400
+        features, ``truncated: True`` means zoom in.
+        """
+        return self.client.get("/api/ferries", {"bbox": ",".join(str(v) for v in bbox), "zoom": zoom})
+
+    def get(self, id: str) -> JSON:
+        """One ferry line or port by OSM id (e.g. ``r5958961``): tags, verified operator site, both ends."""
+        return self.client.get(f"/api/ferries/{quote(id)}")
+
+    def schedule(self, id: str) -> JSON:
+        """Timetable digest from open GTFS feeds: next departures, weekdays, rhythm, travel time.
+
+        ``available: False`` means no open timetable is matched, not that the ferry does not run.
+        """
+        return self.client.get(f"/api/ferries/{quote(id)}/schedule")

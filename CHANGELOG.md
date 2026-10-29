@@ -11,6 +11,18 @@
   OVapi, gtfs.de and others): next departures, weekdays, day and night rhythm, travel time, sailings with arrival;
   local operator time and the license of each feed.
 
+### Added — MCP v0.12.0, JS SDK 1.5.0, Python SDK 0.4.0, plugin 1.0.5: ferries everywhere
+- MCP: `find_ferries` (crossings in a bounding box, narrowed by port, operator or country; cars carried, crossing
+  time, verified operator site, booking link, whether an open timetable exists) and `get_ferry_schedule` (one
+  line: ends, operator site, next departures in local time, rhythm, weekdays, crossing time), both with an
+  interactive card in 7 languages. 32 read-only tools. The npm package also gets the current roadbook engine
+  (passports by trip type, toll coverage flags).
+- JS SDK: `ov.ferries.window()`, `.get()`, `.schedule()`; `ov.stories.search()` and `.digest()`.
+- Python SDK: `ov.ferries.window()`, `.get()`, `.schedule()`; `ov.stories.digest()`; `ov.roadbook.create()`,
+  `.status()`, `.plan()` — the same surface as the JS SDK.
+- Skills: ferries in `openvan-travel` (which tool) and `openvan-api` (endpoints, ODbL attribution).
+- Coverage figures refreshed: fuel 170+ countries, tolls 80+, holidays 210+, power plugs 220+.
+
 ## 2026-10-26
 
 ### Added — API 1.9.0: VanSky rankings and methodology

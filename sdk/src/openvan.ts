@@ -60,6 +60,7 @@ export class OpenVan {
   readonly electricity: ElectricityResource;
   readonly customs: CustomsResource;
   readonly roadbook: RoadbookResource;
+  readonly ferries: FerriesResource;
 
   constructor(options: OpenVanClientOptions = {}) {
     this.client = new OpenVanClient(options);
@@ -77,6 +78,7 @@ export class OpenVan {
     this.electricity = new ElectricityResource(this.client);
     this.customs = new CustomsResource(this.client);
     this.roadbook = new RoadbookResource(this.client);
+    this.ferries = new FerriesResource(this.client);
   }
 }
 
@@ -351,6 +353,16 @@ class StoriesResource {
   async get(slug: string): Promise<unknown> {
     return this.client.get(`/api/story/${slug}`);
   }
+
+  /** Semantic search over stories. */
+  async search(query: string, options: { limit?: number } = {}): Promise<unknown> {
+    return this.client.get("/api/news/search", { q: query, limit: options.limit });
+  }
+
+  /** Today's news digest. */
+  async digest(locale?: Locale): Promise<unknown> {
+    return this.client.get("/api/news/digest", { locale });
+  }
 }
 
 // ─── Toll roads ──────────────────────────────────────────────────────────────
@@ -583,5 +595,36 @@ class RoadbookResource {
       status = (await this.status(created.code)).status;
     }
     return { ...created, status };
+  }
+}
+
+// ─── Ferries ─────────────────────────────────────────────────────────────────
+
+class FerriesResource {
+  constructor(private readonly client: OpenVanClient) {}
+
+  /**
+   * Ferry and river crossing lines (`kind: route`) and ports (`kind: terminal`) in a bounding box,
+   * as GeoJSON from OpenStreetMap (ODbL). `zoom` (0–22, default 8) sets geometry detail; at most
+   * 1400 features, `truncated: true` means zoom in.
+   */
+  async window(
+    bbox: [minLon: number, minLat: number, maxLon: number, maxLat: number],
+    zoom?: number
+  ): Promise<unknown> {
+    return this.client.get("/api/ferries", { bbox: bbox.join(","), zoom });
+  }
+
+  /** One ferry line or port by OSM id (e.g. `r5958961`): tags, verified operator site, both ends. */
+  async get(id: string): Promise<unknown> {
+    return this.client.get(`/api/ferries/${encodeURIComponent(id)}`);
+  }
+
+  /**
+   * Timetable digest from open GTFS feeds: next departures, weekdays, rhythm, travel time.
+   * `available: false` means no open timetable is matched, not that the ferry does not run.
+   */
+  async schedule(id: string): Promise<unknown> {
+    return this.client.get(`/api/ferries/${encodeURIComponent(id)}/schedule`);
   }
 }

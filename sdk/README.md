@@ -2,18 +2,19 @@
 
 Official JavaScript/TypeScript SDK for [OpenVan.camp](https://openvan.camp) — free vanlife/RV travel data API.
 
-- **Fuel prices** — retail prices for 160+ countries (gasoline, diesel, LPG, E85), plus fuel cost for a route
+- **Fuel prices** — retail prices for 170+ countries (gasoline, diesel, LPG, E85), plus fuel cost for a route
 - **Weather scores** — vanlife-specific suitability (0–100): van comfort, sleep conditions, solar yield, driving safety
 - **Food cost index** — cost-of-living comparison across 92 countries vs. a world baseline
 - **Currency rates** — 150+ currencies, EUR-based, updated daily
 - **Events** — 1,100+ vanlife/RV events with geo-coordinates
 - **News stories** — 31,000+ aggregated stories in 7 languages
-- **Toll roads** — per-km rates by vehicle class, vignettes, bridges and tunnels for 85 countries; toll estimate for a route
+- **Toll roads** — per-km rates by vehicle class, vignettes, bridges and tunnels for 80+ countries; toll estimate for a route
 - **Visa rules** — entry mode, length of stay, how days are counted, temporary vehicle import (199 destinations)
 - **License plates** — formats, region codes, validation, ready plate images (199 countries)
-- **Holidays** — public, school (regional) and peak traffic days (212 countries)
+- **Holidays** — public, school (regional) and peak traffic days (210+ countries)
 - **Travel hazards** — FCDO advice level, GDACS disasters, NASA FIRMS active fires
-- **Power plugs** — plug types, voltage, campsite hook-up (229 countries)
+- **Ferries** — ferry and river crossings worldwide (OpenStreetMap, ODbL) with verified operator sites, and open timetables
+- **Power plugs** — plug types, voltage, campsite hook-up (220+ countries)
 - **Customs** — what you may bring in by car, with official quotes
 
 **No API key. No registration. CC BY 4.0.**
@@ -90,7 +91,7 @@ const ov = new OpenVan({
 
 | Method | Returns |
 |---|---|
-| `.prices()` | `Record<string, FuelCountry>` — all 169 countries |
+| `.prices()` | `Record<string, FuelCountry>` — all 170+ countries |
 | `.country(code)` | `FuelCountry` — single country by ISO code |
 | `.cheapest(fuelType?, limit?)` | `FuelCountry[]` — sorted cheapest-first in EUR per liter |
 | `.routeCost(waypoints, options?)` | Fuel cost for 2–10 place names, per-country prices |
@@ -223,6 +224,8 @@ const { events } = await ov.events.list({
 |---|---|
 | `.list(options?)` | `StoriesListData` — paginated stories |
 | `.get(slug)` | `VanStory` with source articles |
+| `.search(query, { limit? })` | Semantic search over stories |
+| `.digest(locale?)` | Today's news digest |
 
 ```ts
 const { stories } = await ov.stories.list({
@@ -293,6 +296,23 @@ A country without data throws `OpenVanError` — that does not mean "no holidays
 | `.fires([minLon, minLat, maxLon, maxLat])` | NASA FIRMS fires of the last 48 h, box up to 10°×10° |
 
 A new fire area may throw with status `503` ("being loaded") — retry in a minute.
+
+---
+
+### `ov.ferries`
+
+| Method | Returns |
+|---|---|
+| `.window([minLon, minLat, maxLon, maxLat], zoom?)` | GeoJSON of ferry and river crossing lines (`kind: route`) and ports (`kind: terminal`) — at most 1400 features, `truncated: true` means zoom in |
+| `.get(id)` | One line or port by OSM id (`r5958961`): tags, verified operator site, booking link, both ends with country |
+| `.schedule(id)` | Timetable digest from open GTFS feeds: next departures, weekdays, rhythm, travel time; `available: false` = no open timetable matched |
+
+```ts
+const sea = await ov.ferries.window([8, 38, 16, 42], 6);       // Tyrrhenian Sea
+const next = await ov.ferries.schedule("r5958961");            // Mortavika – Arsvågen, Norway
+```
+
+Lines and ports are OpenStreetMap data (ODbL): credit "© OpenStreetMap contributors" next to them.
 
 ---
 

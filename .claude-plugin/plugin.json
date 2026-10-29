@@ -1,8 +1,8 @@
 {
   "name": "openvan-camp",
   "displayName": "OpenVan.camp Travel Data",
-  "version": "1.0.4",
-  "description": "Live road-trip and vanlife travel data for AI agents: whole-trip roadbooks, fuel prices in 170+ countries, toll roads, visa and vehicle-import rules, holidays, travel hazards, power plugs, customs, weather for van travel, food costs, currency, events and license plates. Skills for answering travel questions and for building on the free OpenVan.camp API, plus the hosted MCP server. No key.",
+  "version": "1.0.5",
+  "description": "Live road-trip and vanlife travel data for AI agents: whole-trip roadbooks, fuel prices in 170+ countries, toll roads, ferry crossings and timetables, visa and vehicle-import rules, holidays, travel hazards, power plugs, customs, weather for van travel, food costs, currency, events and license plates. Skills for answering travel questions and for building on the free OpenVan.camp API, plus the hosted MCP server. No key.",
   "author": {
     "name": "OpenVan.camp",
     "email": "hello@openvan.camp",

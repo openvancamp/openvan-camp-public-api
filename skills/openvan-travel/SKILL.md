@@ -1,6 +1,6 @@
 ---
 name: openvan-travel
-description: Answer road-trip, campervan, motorhome, RV and vanlife travel questions with live OpenVan.camp data — a whole-trip plan between places, fuel prices by country, toll roads and vignettes, visa and vehicle-import rules for a passport, customs at the border, public and school holidays, travel hazards and wildfires, power plugs, weather for travelling and sleeping in a van, food costs, currency, vanlife events and news, license plates. Use when the user plans a trip by car or campervan, or asks about any of these for a country or route.
+description: Answer road-trip, campervan, motorhome, RV and vanlife travel questions with live OpenVan.camp data — a whole-trip plan between places, fuel prices by country, toll roads and vignettes, ferry crossings and timetables, visa and vehicle-import rules for a passport, customs at the border, public and school holidays, travel hazards and wildfires, power plugs, weather for travelling and sleeping in a van, food costs, currency, vanlife events and news, license plates. Use when the user plans a trip by car or campervan, or asks about any of these for a country or route.
 license: MIT
 metadata:
   author: OpenVan.camp
@@ -24,8 +24,8 @@ If the `openvan` MCP tools are not available, call the REST API instead — the 
    link it returns. Do not rebuild a trip out of single-topic tools; use those only for
    follow-up questions about one country or one topic.
 3. **"No data" is not "nothing applies".** A tool that says it has no data for a country, a
-   `covered: false` answer, an empty vehicle-import result or a toll estimate flagged as partial
-   means OpenVan.camp does not know — not that the border is open, the road is free, nothing is
+   `covered: false` answer, an empty vehicle-import result, a toll estimate flagged as partial or
+   a ferry with no open timetable means OpenVan.camp does not know — not that the border is open, the road is free, nothing is
    restricted or there are no holidays. Say so and point to the official source of that country.
 4. **Visa and vehicle rules:** quote the allowed stay *and* how the days are counted (per entry
    or a rolling window such as 90 in 180), say whether the vehicle may stay as long as the person,
@@ -57,6 +57,7 @@ If the `openvan` MCP tools are not available, call the REST API instead — the 
 | Customs limits at the border | `get_customs_rules` |
 | Public, school holidays, peak traffic days | `get_holidays` |
 | Is it safe now, disasters / wildfires near a place | `get_travel_hazards` / `get_active_fires` |
+| Ferries to an island or across a sea, strait or river / next departure, crossing time | `find_ferries` (bbox, narrow with `query` = port or operator), then `get_ferry_schedule` with its id |
 | Sockets, voltage, campsite hook-up | `get_power_plugs` |
 | Weather for one city / a country / where to go for good weather | `get_city_travel_weather` / `get_country_travel_weather` / `list_best_weather_countries` (`period=week` for this week: the OpenVan.camp ranking) |
 | Usual weather on a later date, sea temperature in a month, best month to go | `get_city_climate` (city or lat/lng; omit `date` for the 12 months) |

@@ -18,6 +18,7 @@ Full contract: <https://openvan.camp/docs.openapi>.
 | `get_holidays` | `GET /api/holidays/countries/{code}?from=YYYY-MM-DD&to=YYYY-MM-DD&kind=public\|school\|traffic` |
 | `get_travel_hazards` | `GET /api/hazards/countries/{code}` |
 | `get_active_fires` | `GET /api/hazards/fires?bbox=west,south,east,north` (up to 10°×10°) |
+| `find_ferries`, `get_ferry_schedule` | `GET /api/ferries?bbox=west,south,east,north&zoom=6` (GeoJSON; keep `kind: route`), `GET /api/ferries/{id}` and `/api/ferries/{id}/schedule` |
 | `get_power_plugs` | `GET /api/electricity/countries/{code}` |
 | `get_country_travel_weather`, `get_city_travel_weather`, `list_best_weather_countries` | `GET /api/vansky/weather/{code}`, `/api/vansky/weather/{code}/{city}`, `/api/vansky/ranking` (`/api/vansky/weather/{code}/cities` for the cities of a country, `/api/vansky/methodology` for the formula) |
 | `get_city_climate` | `GET /api/vansky/climate?lat=&lng=&date=MM-DD`, `/api/vansky/climate/{code}/{city}?date=MM-DD` |

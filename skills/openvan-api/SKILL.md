@@ -1,6 +1,6 @@
 ---
 name: openvan-api
-description: Build websites, apps, bots and dashboards on the free OpenVan.camp travel data API (no key, CORS) or its SDKs (@openvancamp/sdk for JS/TS, openvan for Python) — fuel prices in 170+ countries, route fuel and toll cost, whole-trip roadbooks, visa and vehicle-import rules, public and school holidays, travel hazards and wildfires, power plugs, customs rules, weather suitability scores, food price index, currency rates, vanlife events, news and license plate images. Use when code calls openvan.camp/api, imports @openvancamp/sdk or openvan, or the user wants fuel, toll, visa, holiday or road-trip data in their product.
+description: Build websites, apps, bots and dashboards on the free OpenVan.camp travel data API (no key, CORS) or its SDKs (@openvancamp/sdk for JS/TS, openvan for Python) — fuel prices in 170+ countries, route fuel and toll cost, ferry crossings and timetables, whole-trip roadbooks, visa and vehicle-import rules, public and school holidays, travel hazards and wildfires, power plugs, customs rules, weather suitability scores, food price index, currency rates, vanlife events, news and license plate images. Use when code calls openvan.camp/api, imports @openvancamp/sdk or openvan, or the user wants fuel, toll, visa, holiday or road-trip data in their product.
 license: MIT
 metadata:
   author: OpenVan.camp
@@ -51,6 +51,11 @@ code against it; interactive docs at <https://openvan.camp/docs>. Endpoint list:
   `status: pending`; poll `GET /api/roadbook/{code}/status` until `ready` (long routes take up to
   a minute), then link to `https://openvan.camp` + `url`. Identical requests return the same
   roadbook.
+- **Ferries are ODbL, not CC BY.** Lines and ports from `/api/ferries` are an OpenStreetMap
+  derivative: credit "© OpenStreetMap contributors" as well as OpenVan.camp, and keep a database
+  you build from them under ODbL. Timetables carry the license of their GTFS feed (`sources`).
+  `motorcar` missing means unknown, not "no cars"; `available: false` on a schedule means no open
+  timetable, not "no ferry".
 - **Hazards are the situation now**, not a forecast; a new fire bbox may answer "being loaded,
   retry in a minute" the first time.
 - **Locales:** `en`, `ru`, `de`, `fr`, `es`, `pt`, `tr`.

@@ -5,16 +5,19 @@ Add `source=<your-app>` and, where text is returned, `locale=<en|ru|de|fr|es|pt|
 
 | Endpoint | Description | Coverage |
 |----------|-------------|----------|
-| `GET /api/fuel/prices` | Retail fuel prices (gasoline, diesel, LPG, E85) | 160+ countries |
+| `GET /api/fuel/prices` | Retail fuel prices (gasoline, diesel, LPG, E85) | 170+ countries |
 | `POST /api/route-cost` | Fuel cost for a route of 2–10 waypoints, per-country prices | — |
 | `POST /api/roadbook/from-places` | Whole-trip roadbook from 2–10 place names: day-by-day plan, budget, per-country entry and vehicle rules; returns a shareable page | — |
 | `GET /api/roadbook/{code}/status` | Build status of a roadbook (poll until `ready`) | — |
-| `GET /api/tolls/countries` | Toll roads by country: payment system, per-km rates by vehicle class, vignettes | 84 countries |
+| `GET /api/tolls/countries` | Toll roads by country: payment system, per-km rates by vehicle class, vignettes | 80+ countries |
 | `GET /api/tolls/route` | Toll cost for a route of 2–10 place names (car, van, heavy), EUR range | — |
-| `GET /api/holidays/countries/{code}?from=&to=` | Public holidays, school holidays (regional) and peak traffic days | 212 countries |
+| `GET /api/holidays/countries/{code}?from=&to=` | Public holidays, school holidays (regional) and peak traffic days | 210+ countries |
 | `GET /api/hazards/countries/{code}` | UK FCDO travel advice level and current GDACS natural disasters | — |
 | `GET /api/hazards/fires?bbox=` | NASA FIRMS active fires of the last 48 hours in a bounding box (up to 10°×10°) | worldwide |
-| `GET /api/electricity/countries/{code}` | Plug types, mains voltage and frequency, campsite hook-up (CEE17) | 229 countries |
+| `GET /api/ferries?bbox=&zoom=` | Ferry and river crossing lines and ports (GeoJSON, OpenStreetMap, ODbL) with hand-checked operator sites and booking links | worldwide |
+| `GET /api/ferries/{id}` | One line or port: all tags, verified operator site, both ends with country and nearest town | — |
+| `GET /api/ferries/{id}/schedule` | Timetable digest from open GTFS feeds: next departures, weekdays, rhythm, travel time | 820 crossings (Oct 2026) |
+| `GET /api/electricity/countries/{code}` | Plug types, mains voltage and frequency, campsite hook-up (CEE17) | 220+ countries |
 | `GET /api/customs/countries/{code}?from=` | Customs rules on entry by car: food, cash, alcohol, tobacco, fuel canister | — |
 | `GET /api/currency/rates` | Exchange rates relative to EUR | 150+ currencies |
 | `GET /api/vanbasket/countries` | Food price index relative to world average (100 = world avg) | 90+ countries |
@@ -38,6 +41,7 @@ Add `source=<your-app>` and, where text is returned, `locale=<en|ru|de|fr|es|pt|
 | `GET /api/stories` | News stories aggregated from 200+ publishers | 31,000+ stories |
 | `GET /api/story/{slug}` | Full story with all source articles and direct links | — |
 | `GET /api/news/search?q=...` | Semantic search over stories | — |
+| `GET /api/news/digest` | Today's news digest | — |
 | `GET /api/plates` | License plates of the world: formats, region codes, example plates | 199 countries |
 | `GET /api/plates/{code}/types` | Plate types of a country (private, taxi, motorcycle, diplomatic…); empty where not broken down | — |
 | `GET /api/plates/{code}/plate.svg` | Ready plate image (also `.png`) — drop into `<img src>` | — |

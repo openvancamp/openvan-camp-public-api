@@ -153,6 +153,28 @@ class OpenVanTest(unittest.TestCase):
         query = parse_qs(urlparse(calls[0].full_url).query)
         self.assertEqual(query["from"], ["2026-10-01"])
 
+    def test_ferries_window_joins_bbox_and_passes_zoom(self):
+        fake, calls = respond({"/api/ferries": {"type": "FeatureCollection", "features": []}})
+        with mock.patch("openvan.client.urlopen", fake):
+            OpenVan().ferries.window((4.9, 58.8, 6.2, 59.4), zoom=9)
+        query = parse_qs(urlparse(calls[0].full_url).query)
+        self.assertEqual((query["bbox"], query["zoom"]), (["4.9,58.8,6.2,59.4"], ["9"]))
+
+    def test_ferry_schedule_path(self):
+        fake, calls = respond({"/api/ferries/r5958961/schedule": {"available": False}})
+        with mock.patch("openvan.client.urlopen", fake):
+            self.assertFalse(OpenVan().ferries.schedule("r5958961")["available"])
+
+    def test_roadbook_plan_polls_until_ready(self):
+        fake, calls = respond({
+            "/api/roadbook/from-places": {"code": "abc12", "status": "building", "url": "/en/roadbook/abc12"},
+            "/api/roadbook/abc12/status": {"status": "ready", "error": None},
+        })
+        with mock.patch("openvan.client.urlopen", fake), mock.patch("openvan.api.time.sleep"):
+            result = OpenVan().roadbook.plan(["Munich", "Venice"])
+        self.assertEqual(result["status"], "ready")
+        self.assertEqual(json.loads(calls[0].data)["places"], ["Munich", "Venice"])
+
     def test_api_error_message_is_kept(self):
         body = io.BytesIO(json.dumps({"message": "Place not found: Atlantis"}).encode())
         error = HTTPError("https://openvan.camp/api/tolls/route", 422, "Unprocessable", {}, body)
@@ -188,6 +210,8 @@ class LiveSmokeTest(unittest.TestCase):
         self.assertIn("advisory", ov.hazards.country("TR"))
         self.assertIn("plugs", ov.electricity.country("GB"))
         self.assertIn("items", ov.customs.country("TR", from_country="DE"))
+        self.assertIn("features", ov.ferries.window((4.9, 58.8, 6.2, 59.4), zoom=9))
+        self.assertIn("available", ov.ferries.schedule("r5958961"))
 
 
 if __name__ == "__main__":

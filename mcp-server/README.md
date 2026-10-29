@@ -5,13 +5,14 @@
 
 **Official MCP server for [OpenVan.camp](https://openvan.camp)** — free, no-auth, machine-readable vanlife and RV travel data for AI agents.
 
-Exposes 30 read-only tools via the [Model Context Protocol](https://modelcontextprotocol.io) so you can ask your AI assistant about:
+Exposes 32 read-only tools via the [Model Context Protocol](https://modelcontextprotocol.io) so you can ask your AI assistant about:
 
 - **Whole road trips** — `plan_road_trip` builds an [OpenVan.camp roadbook](https://openvan.camp/en/roadbook): day-by-day plan with overnights, budget (fuel, tolls, vignettes, ferries), entry and vehicle rules for every country on the way, and a shareable roadbook page
 - **Fuel prices** across all API-supported countries, using the same price keys as `/api/fuel/prices`
 - **Toll roads** — per-km rates, vignettes, toll bridges and tunnels by country; toll estimate for a route
 - **Holidays and peak traffic** — public and school holidays (regional), official peak traffic days
 - **Travel hazards** — UK FCDO advice level, GDACS natural disasters, NASA FIRMS active fires of the last 48 hours
+- **Ferries** — ferry and river crossings in an area (OpenStreetMap): operator, cars carried, verified operator site and booking link; timetable digest from open GTFS feeds with the next departures
 - **Power plugs** — plug types, mains voltage and frequency, campsite hook-up connector (CEE17)
 - **Customs rules** — food bans, cash declaration, alcohol and tobacco limits, with official quotes
 - **VanSky** vanlife weather suitability scores (0-100) for countries and cities
@@ -120,6 +121,8 @@ npx -y @openvancamp/mcp-server
 | `get_holidays` | Public holidays, school holidays (with ISO 3166-2 regions) and peak traffic days for up to 400 days |
 | `get_travel_hazards` | FCDO travel advice level and current GDACS disasters with alert level in one country |
 | `get_active_fires` | NASA FIRMS satellite fire detections of the last 48 hours in a bounding box up to 10°×10° |
+| `find_ferries` | Ferry and river crossings in a bounding box: operator, cars carried, crossing time, operator site checked by hand, booking link, whether an open timetable exists |
+| `get_ferry_schedule` | One ferry line: both ends, operator site, next departures today in local time, sailings per day, rhythm, weekdays, crossing time (open GTFS feeds) |
 | `get_power_plugs` | Plug types (IEC A–N), voltage and frequency, campsite hook-up connector in Europe |
 | `get_customs_rules` | Customs rules on entry by car: food, cash, alcohol, tobacco, fuel canister, with source quotes |
 
@@ -143,6 +146,7 @@ All tools are `readOnlyHint: true` and `openWorldHint: true` (they call the publ
 - "Are there school holidays or peak traffic days in France next week?"
 - "Any wildfires near Valencia right now?"
 - "Can I bring cheese and sausage into Norway by car?"
+- "Which ferries take a campervan from mainland Italy to Sardinia? When is the next one?"
 
 ---
 
