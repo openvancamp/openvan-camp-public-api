@@ -14,6 +14,8 @@ Environment=OPENVAN_MCP_HOST=127.0.0.1
 Environment=OPENVAN_MCP_PORT=4800
 Environment=OPENVAN_API_URL=https://openvan.camp
 Environment=OPENVAN_SOURCE=mcp-server-sse
+# OPENVAN_LOG_TOKEN (telemetry, hosted server only) — chmod 600, gitignored
+EnvironmentFile=-/home/vanlife/VanLife-Aggregator-laravel/mcp-server/telemetry.env
 ExecStart=/usr/bin/node /home/vanlife/VanLife-Aggregator-laravel/mcp-server/dist/sse.js
 Restart=on-failure
 RestartSec=5

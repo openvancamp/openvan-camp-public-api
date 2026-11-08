@@ -13,7 +13,7 @@
  * Чистый модуль: без DOM и хранилища, тексты — через переданный fmt.
  */
 
-import { DAY, addDays, kmToLine, pct, kmOnLine, weekOfYear } from './plan/util.js';
+import { DAY, addDays, kmToLine, pct, kmOnLine, weekOfYear, camperFares } from './plan/util.js';
 import { holidaysRow, customsRow, powerRow, hazardsRow } from './rows/datasets.js';
 import { moneyRow } from './rows/money.js';
 import { sightVisitMin, topSights } from './rows/sights.js';
@@ -130,10 +130,15 @@ export function buildPlan(payload, inputs, visa, env) {
     // дорога — по оставшемуся времени.
     const ferryPieces = [];
     const ferryInfo = Object.values(payload.ferries || {});
+    // Паромы базы ferry_features на линии маршрута (RoadbookPayload::ferryLegs): время рейса там,
+    // где переправы нет в config roadbook.ferries.
+    const ferryLegs = route.ferry_legs || [];
+    const ferryLegAt = (km, len = 0) => ferryLegs.find(f => f.from_km <= km + len + 5 && f.to_km >= km - 5) || null;
     (route.borders || []).forEach((b) => {
         if (b.ferry && b.ferry_km > 0) {
             const info = ferryInfo.find(f => (f.from === b.from && f.to === b.to) || (f.from === b.to && f.to === b.from));
-            ferryPieces.push({ from: b.km, to: Math.min(total, b.km + b.ferry_km), h: info?.duration_min ? info.duration_min / 60 : b.ferry_km / FERRY_KMH });
+            const leg = ferryLegAt(b.km, b.ferry_km);
+            ferryPieces.push({ from: b.km, to: Math.min(total, b.km + b.ferry_km), h: info?.duration_min ? info.duration_min / 60 : leg?.duration_min ? leg.duration_min / 60 : b.ferry_km / FERRY_KMH });
         }
     });
     // Паром внутри страны (Крит, пролив Кука) — без границы: место — по точке переправы на линии.
@@ -146,6 +151,13 @@ export function buildPlan(payload, inputs, visa, env) {
                 ferryPieces.push({ from, to, h: f.duration_min ? f.duration_min / 60 : f.length_km / FERRY_KMH });
             }
         });
+    ferryLegs.forEach((f) => {
+        const from = Math.max(0, f.from_km);
+        const to = Math.min(total, f.to_km);
+        if (to > from && f.duration_min && !ferryPieces.some(x => from < x.to && to > x.from)) {
+            ferryPieces.push({ from, to, h: f.duration_min / 60 });
+        }
+    });
     ferryPieces.sort((a, b) => a.from - b.from);
     const ferryKm = ferryPieces.reduce((sum, x) => sum + (x.to - x.from), 0);
     const ferryH = ferryPieces.reduce((sum, x) => sum + x.h, 0);
@@ -859,10 +871,33 @@ export function buildPlan(payload, inputs, visa, env) {
 
         return unknown || rows.length || notes.length || cameras.length || noCamera ? { unknown, notes, rows, cameras, noCamera } : null;
     };
+    /** «только летом 13 мая – 27 сент.» у линий, которые зимой не ходят (Норвегия, NVDB). */
+    const ferrySeason = (leg) => {
+        const day = mmdd => (/^\d{2}-\d{2}$/.test(mmdd || '') ? fmt.dateShort(new Date(2000, +mmdd.slice(0, 2) - 1, +mmdd.slice(3))) : null);
+        return leg.season?.from && leg.season?.to ? fmt.t('ferry_summer', { from: day(leg.season.from), to: day(leg.season.to) }) : null;
+    };
+    /** Переправа границы по базе паромов, когда её нет в config roadbook.ferries: без цены и правил порта. */
+    const ferryFromLegs = (i, from, to) => {
+        const b = route.borders?.[i];
+        const leg = b?.ferry ? ferryLegAt(b.km, b.ferry_km || 0) : null;
+        if (!leg) {
+            return null;
+        }
+        const reversed = leg.from_cc === to && leg.to_cc === from;
+        const ports = reversed ? { from: leg.to, to: leg.from } : { from: leg.from, to: leg.to };
+        const name = ports.from && ports.to ? `${ports.from} — ${ports.to}` : leg.name;
+        const line = [fmt.t('ferry_line', { name }), leg.duration_min ? `~${fmt.t('hours', { n: fmt.num(leg.duration_min / 60) })}` : null,
+            leg.length_km ? fmt.t('km', { km: Math.round(leg.length_km) }) : null, (leg.operators || []).join(', ') || null,
+            leg.free === true ? fmt.t('ferry_free') : null, ferrySeason(leg), leg.autopass === true ? fmt.t('ferry_autopass') : null,
+            camperFares(leg, fmt)].filter(Boolean).join(' · ');
+
+        return { name, ports, line, duration_min: leg.duration_min, length_km: leg.length_km, eur: leg.free === true ? 0 : null, price: leg.free === true ? fmt.t('ferry_free') : fmt.t('no_data'), buy_url: leg.booking_url || null,
+            operators: (leg.operators || []).map(n => ({ name: n, url: null })), source_url: leg.url };
+    };
     const ferryFor = (i, from, to) => {
         const item = ferryItems[i];
         if (!item) {
-            return null;
+            return ferryFromLegs(i, from, to);
         }
         const data = payload.ferries[item.meta.slug];
         const reversed = data.from === to && data.to === from;

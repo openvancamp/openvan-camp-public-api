@@ -3,7 +3,7 @@
  * Вынесено из buildPlan (рефакторинг 02.10.2026).
  */
 import { parseLocalDate } from '../../visa-calc-core.js';
-import { mdDate, inSeason } from '../plan/util.js';
+import { mdDate, inSeason, camperFares } from '../plan/util.js';
 // Страны, где платные автомагистрали есть, а тег toll=yes в OpenStreetMap стоит неровно:
 // на Пекин → Тяньцзинь размечено 4,4 км из 125. Ноль платных км там — не «бесплатно».
 const TOLL_TAGS_POOR = new Set(['CN', 'TH']);
@@ -108,10 +108,20 @@ export function roadsRow(ctx) {
             src: srcOf(verified(perKm)),
         });
     }
+    const seasonDay = mmdd => fmt.dateShort(new Date(2000, +mmdd.slice(0, 2) - 1, +mmdd.slice(3)));
+    // Паромы внутри страны по базе ferry_features (Барселона — Пальма, Сплит — Стари-Град), если
+    // своей карточки парома с ценой у страны нет: переправа, время рейса, перевозчики.
+    const ferryLines = items.some(isFerry) ? [] : (route.ferry_legs || [])
+        .filter(f => (f.from_cc || r.cc) === r.cc && (f.to_cc || r.cc) === r.cc && f.from_km >= r.from_km - 1 && f.from_km < r.to_km + 1)
+        .map(f => [fmt.t('ferry_line', { name: f.from && f.to ? `${f.from} — ${f.to}` : f.name }),
+            f.duration_min ? `~${fmt.t('hours', { n: fmt.num(f.duration_min / 60) })}` : null,
+            (f.operators || []).join(', ') || null, f.free === true ? fmt.t('ferry_free') : null,
+            f.season?.from && f.season?.to ? fmt.t('ferry_summer', { from: seasonDay(f.season.from), to: seasonDay(f.season.to) }) : null,
+            f.autopass === true ? fmt.t('ferry_autopass') : null, camperFares(f, fmt)].filter(Boolean).join(' · '));
     return {
         key: 'roads',
         s: mode === 'free' ? 'ok' : mode === 'unknown' ? 'none' : 'toll',
-        mode, lines: [...vgLines, ...(route.avoid_tolls && paidItems.some(x => !isFerry(x)) ? [fmt.t('road_avoid_remaining')] : [])], items: roadItems, eachWay: round && roadItems.length > 0, checked: null, vignette: vg, tollSum, ferrySum,
+        mode, lines: [...vgLines, ...ferryLines, ...(route.avoid_tolls && paidItems.some(x => !isFerry(x)) ? [fmt.t('road_avoid_remaining')] : [])], items: roadItems, eachWay: round && roadItems.length > 0, checked: null, vignette: vg, tollSum, ferrySum,
         big: mode === 'unknown' ? fmt.t('no_data') : tollSum ? `≈ ${fmt.money(tollSum)}${round ? ' ' + fmt.t('both_ways') : ''}` : vg ? fmt.t(vg.again ? 'road_vignette_big_two' : 'road_vignette_big', { price: fmt.money(vg.eur) }) : fmt.t('road_free'),
         avoid: !!route.avoid_tolls,
     };;

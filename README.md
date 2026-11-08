@@ -55,7 +55,7 @@ The OpenAPI spec at `/docs.openapi` is generated from the live codebase and is t
 | `POST /api/route-cost` | Fuel cost for a route of 2–10 waypoints, per-country prices | — |
 | `POST /api/roadbook/from-places` | Whole-trip roadbook from 2–10 place names: day-by-day plan, budget, per-country entry and vehicle rules; returns a shareable page | — |
 | `GET /api/roadbook/{code}/status` | Build status of a roadbook (poll until `ready`) | — |
-| `GET /api/tolls/countries` | Toll roads by country: payment system, per-km rates by vehicle class, vignettes | 80+ countries |
+| `GET /api/tolls/countries` | Toll roads by country: payment system, per-km rates by vehicle class, vignettes | 110+ countries |
 | `GET /api/tolls/route` | Toll cost for a route of 2–10 place names (car, van, heavy), EUR range | — |
 | `GET /api/holidays/countries/{code}?from=&to=` | Public holidays, school holidays (regional) and peak traffic days | 210+ countries |
 | `GET /api/hazards/countries/{code}` | UK FCDO travel advice level and current GDACS natural disasters | — |

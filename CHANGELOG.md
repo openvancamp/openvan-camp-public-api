@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-08
+
+### Changed — MCP v0.12.1, plugin 1.0.6
+- MCP: the package no longer reads anything from disk. Telemetry is used only by the hosted server at
+  mcp.openvan.camp and gets its token from the `OPENVAN_LOG_TOKEN` environment variable; the `telemetry.token`
+  file fallback is gone. Without the variable telemetry stays off, as before. No tool changes.
+- MCP: the npm package gets the current roadbook engine.
+- Plugin: `assets/logo.svg` is now a plain SVG (no `<style>`, XML prolog or `xlink`), so plugin directories accept it.
+- Coverage figures: tolls 110+ countries (README, skill `openvan-api`).
+
 ## 2026-10-29
 
 ### Added — API 1.10.0: ferries

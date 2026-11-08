@@ -107,3 +107,19 @@ export const FUEL_TREND_WEEKS = 8;
 export const FUEL_TREND_MIN = 0.9;
 export const FUEL_TREND_MAX = 1.15;
 export const FUEL_TREND_SHOW = 0.01;
+
+/**
+ * «кемпер: до 6 м — £62,75 · до 8 м — £156,90» по проверенному тарифу (CalMac, Эстония); null — тарифа нет.
+ * Длину машины роудбук не спрашивает, поэтому показываем все классы.
+ */
+export function camperFares(leg, fmt) {
+    const fares = leg.motorhome_fares;
+    const rows = (fares?.rows || []).filter(r => r.single > 0);
+    if (!rows.length) {
+        return null;
+    }
+    const money = v => new Intl.NumberFormat(document.documentElement.lang || undefined, { style: 'currency', currency: fares.currency }).format(v);
+    const list = rows.map(r => (r.to_m ? `${fmt.t('ferry_upto_m', { m: r.to_m })} — ${money(r.single)}` : money(r.single))).join(', ');
+
+    return fmt.t('ferry_camper_fares', { list });
+}

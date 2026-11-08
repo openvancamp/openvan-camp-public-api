@@ -17,8 +17,8 @@ export interface ToolCallEvent {
  * Fire-and-forget логирование вызова инструмента в openvan.camp.
  *
  * Никогда не блокирует и не бросает в путь MCP-ответа: ошибки сети/таймауты
- * глотаются. Если токен не сконфигурирован — no-op (например, на stdio-клиентах
- * у пользователей, где telemetry.token отсутствует).
+ * глотаются. Если токен не сконфигурирован — no-op (так у всех, кроме боевого
+ * сервера OpenVan.camp: OPENVAN_LOG_TOKEN задаёт только его systemd-unit).
  */
 export function logToolCall(event: ToolCallEvent): void {
   if (!LOG_TOKEN || !LOG_URL) {

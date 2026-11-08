@@ -78,6 +78,7 @@ Overridable in the systemd unit (`Environment=`):
 | `OPENVAN_MCP_PORT` | `4800`      | TCP port |
 | `OPENVAN_API_URL`  | `https://openvan.camp` | Upstream REST API base |
 | `OPENVAN_SOURCE`   | `mcp-server-sse` | `?source=` tag written to `api_request_logs` |
+| `OPENVAN_LOG_TOKEN` | — | Telemetry token for `mcp_tool_calls`. Hosted server only, via `EnvironmentFile=` (`mcp-server/telemetry.env`, chmod 600, gitignored). The package never reads it from disk; unset = telemetry off |
 
 ## Troubleshooting
 
