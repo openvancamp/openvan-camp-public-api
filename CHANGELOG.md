@@ -2,6 +2,19 @@
 
 ## 2026-11-19
 
+### Changed — MCP v0.12.2 (roadbook engine)
+- `plan_road_trip` gets the current roadbook engine, with the corrections from a fact-check of the road rules:
+  - Entry by land: where a visa on arrival or an e-visa is not valid at land borders, the trip now says a visa is
+    needed in advance; where it is valid only at some crossings, the crossings are listed (Russian e-visa, Vietnam,
+    Laos, Myanmar, Egypt, Jordan, Thailand); Canada's eTA is not needed by land.
+  - Vehicle registered in the same customs union as the country (EU plates in the EU, EAEU plates in the EAEU)
+    no longer gets a temporary-import time limit.
+  - Alcohol limit for vehicles over 3.5 t where it differs; winter rules: chains as an alternative to winter tyres,
+    tread depth per country, separate rules over 3.5 t where they differ; regional winter rules (US, Canada) no
+    longer claim to apply on your route.
+  - "No holidays or school breaks" is no longer stated for countries without school-holiday data.
+- No tool changes.
+
 ### Added — identify your integration
 - Responses to requests without `?source=` now carry a reminder in `_attribution.identify` and an
   `X-OpenVan-Identify` header. The data is unchanged; requests with your own `source` get neither.

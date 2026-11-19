@@ -114,7 +114,8 @@ export function roadsRow(ctx) {
     const ferryLines = items.some(isFerry) ? [] : (route.ferry_legs || [])
         .filter(f => (f.from_cc || r.cc) === r.cc && (f.to_cc || r.cc) === r.cc && f.from_km >= r.from_km - 1 && f.from_km < r.to_km + 1)
         .map(f => [fmt.t('ferry_line', { name: f.from && f.to ? `${f.from} — ${f.to}` : f.name }),
-            f.duration_min ? `~${fmt.t('hours', { n: fmt.num(f.duration_min / 60) })}` : null,
+            // Короче часа — в минутах: «~0,083 ч» вместо «~5 мин» (факт-чек 19.11, Сиркеджи — Харем).
+            f.duration_min ? `~${f.duration_min < 60 ? `${f.duration_min} ${fmt.t('min_short')}` : fmt.t('hours', { n: fmt.num(Math.round(f.duration_min / 6) / 10) })}` : null,
             (f.operators || []).join(', ') || null, f.free === true ? fmt.t('ferry_free') : null,
             f.season?.from && f.season?.to ? fmt.t('ferry_summer', { from: seasonDay(f.season.from), to: seasonDay(f.season.to) }) : null,
             f.autopass === true ? fmt.t('ferry_autopass') : null, camperFares(f, fmt)].filter(Boolean).join(' · '));

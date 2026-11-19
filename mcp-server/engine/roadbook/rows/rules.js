@@ -64,7 +64,10 @@ export function rulesRow(rules, inputs, fmt) {
         lines.push(fmt.t('rules_speed_varies'));
     }
     const alc = rules.alcohol;
-    if (alc && typeof alc.general === 'number') {
+    // Свыше 3,5 т во многих странах свой предел (IT/SI/HR 0, AT 0,1, TR 0,2) — показываем его, а не общий.
+    if (kind === 'heavy' && alc && typeof alc.heavy === 'number') {
+        lines.push(fmt.t('rules_alcohol_heavy', { h: fmt.num(alc.heavy) }));
+    } else if (alc && typeof alc.general === 'number') {
         lines.push(typeof alc.novice === 'number' && alc.novice !== alc.general
             ? fmt.t('rules_alcohol_novice', { g: fmt.num(alc.general), n: fmt.num(alc.novice) })
             : fmt.t('rules_alcohol', { g: fmt.num(alc.general) }));

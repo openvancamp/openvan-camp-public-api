@@ -20,7 +20,7 @@ import { sightVisitMin, topSights } from './rows/sights.js';
 import { climateTemps, forecastSky } from './rows/weather.js';
 import { winterRow } from './rows/winter.js';
 import { roadsRow, urbanRow, notesRow } from './rows/roads.js';
-import { rulesRow, requiredEquipment } from './rows/rules.js';
+import { rulesRow, requiredEquipment, vehicleKind } from './rows/rules.js';
 import { licenceRow, licenceCheck } from './rows/licence.js';
 import { sosRow } from './rows/sos.js';
 import { fuelRow } from './rows/fuel.js';
@@ -765,7 +765,10 @@ export function buildPlan(payload, inputs, visa, env) {
     };
     /** Что ждёт на границе при въезде из `from` в `to`; back — это пересечение на обратной дороге. */
     // Для BY есть исключения, но профиль не содержит владельца/цели ввоза: решение неизвестно.
-    const conditionalPlate = leg => inputs.plates === 'BY' && !!leg?.plate_ban;
+    // Исключение для частной машины с белорусскими номерами подтверждено только в Польше (KAS): в Латвии
+    // такие машины запрещены и конфискуются (CSDD) — польский текст там опасен (факт-чек 19.11).
+    const BY_PLATE_CONDITIONAL = new Set(['PL']);
+    const conditionalPlate = (leg, cc) => inputs.plates === 'BY' && !!leg?.plate_ban && BY_PLATE_CONDITIONAL.has(cc);
     const borderChecks = (from, to, i, back = false, ferry = false) => {
         const fromZone = ferry && SCHENGEN_MEMBERS.has(from) ? 'SCHENGEN' : zoneOf(from);
         const toZone = ferry && SCHENGEN_MEMBERS.has(to) ? 'SCHENGEN' : zoneOf(to);
@@ -779,7 +782,7 @@ export function buildPlan(payload, inputs, visa, env) {
         }
         const toLeg = legFor(to);
         if (toLeg?.plate_ban && !innerSchengen(from, to)) {
-            checks.push({ s: conditionalPlate(toLeg) ? 'warn' : 'bad', t: fmt.t(conditionalPlate(toLeg) ? 'car_plate_conditional' : 'check_plate_ban') });
+            checks.push({ s: conditionalPlate(toLeg, to) ? 'warn' : 'bad', t: fmt.t(conditionalPlate(toLeg, to) ? 'car_plate_conditional' : 'check_plate_ban') });
         }
         const green = toLeg?.green_card_for_plate;
         if (green === 'border_insurance' && !toLeg?.plate_ban) {
@@ -943,6 +946,23 @@ export function buildPlan(payload, inputs, visa, env) {
     });
     // ---------- Карточки ----------
     const plan = [];
+    // Виза по прибытии / e-Visa / ETA при въезде ПО СУШЕ (config visa.land_entry, факт-чек 19.11): во многих странах
+    // они действуют только в аэропортах или на части пунктов, а eTA Канады по суше не нужна вовсе.
+    const landEntryRow = (land, row, overland) => {
+        const field = row.mode === 'voa' ? 'voa' : ['e_visa', 'eta'].includes(row.mode) ? 'e_visa' : null;
+        const rule = overland && land && field ? land[field] : null;
+        if (rule === 'no') {
+            return { key: 'visa', s: 'bad', big: fmt.t('visa_land_needed'), lines: [fmt.t(`visa_land_no_${field}`), row.note].filter(Boolean), source: land.source_url };
+        }
+        if (rule === 'listed') {
+            return { key: 'visa', s: 'warn', big: row.mode_label || fmt.t('visa_needed'), lines: [fmt.t('visa_land_listed', { list: (land[`${field}_crossings`] || []).join(', ') }), row.note].filter(Boolean), source: land.source_url };
+        }
+        if (rule === 'not_required') {
+            return { key: 'visa', s: 'ok', free: true, big: fmt.t('visa_land_not_required'), lines: [fmt.t('visa_land_not_required_text')], source: land.source_url };
+        }
+
+        return null;
+    };
     const cards = ranges.map((r, i) => {
         const p = presence[r.key];
         const stayN = stayInfo[r.cc]?.n || 0;
@@ -969,7 +989,8 @@ export function buildPlan(payload, inputs, visa, env) {
             if (t.kind === 'restricted') {
                 vrow = { key: 'visa', s: 'bad', big: fmt.t('visa_restricted'), restricted: true, lines: [t.row.note || fmt.t('visa_restricted_text')] };
             } else if (t.kind === 'visa') {
-                vrow = { key: 'visa', s: 'warn', big: t.row.mode_label || fmt.t('visa_needed'), lines: [t.row.note].filter(Boolean) };
+                vrow = landEntryRow(legFor(r.cc)?.land_entry, t.row, i > 0 && !borders[i - 1]?.ferry)
+                    || { key: 'visa', s: 'warn', big: t.row.mode_label || fmt.t('visa_needed'), lines: [t.row.note].filter(Boolean) };
             } else if (t.kind === 'manual') {
                 vrow = { key: 'visa', s: 'warn', manual: true, big: fmt.t('visa_manual'), lines: [t.row.note].filter(Boolean) };
             } else if (t.kind === 'residence') {
@@ -1032,7 +1053,7 @@ export function buildPlan(payload, inputs, visa, env) {
         let car;
         if (!inputs.plates) {
             car = { key: 'car', s: 'none', hint: true, lines: [fmt.t('car_pick_plates')] };
-        } else if (conditionalPlate(leg)) {
+        } else if (conditionalPlate(leg, r.cc)) {
             car = { key: 'car', s: 'warn', conditional: true, big: fmt.t('car_plate_conditional'),
                 lines: [fmt.t('car_plate_conditional_text')], source: r.cc === 'PL'
                     ? 'https://www.gov.pl/web/kas/nowe-zasady-przywozu-samochodow-osobowych-zarejestrowanych-na-bialorusi'
@@ -1044,6 +1065,9 @@ export function buildPlan(payload, inputs, visa, env) {
             // номера ЕС в зоне свободного передвижения, и «Своя страна» там звучало бы неправдой.
             const eu = inputs.plates && inputs.plates !== r.cc;
             car = { key: 'car', s: 'ok', free: true, big: fmt.t(eu ? 'car_home_eu' : 'car_home'), lines: [] };
+        } else if (leg?.car_union) {
+            // Номера того же таможенного союза (ЕС в ЕС, ЕАЭС в ЕАЭС) — временного ввоза нет, при любом паспорте.
+            car = { key: 'car', s: 'ok', free: true, big: fmt.t(leg.car_union === 'eaeu' ? 'car_home_eaeu' : 'car_home_eu'), lines: [] };
         } else if (!leg?.vehicle) {
             car = { key: 'car', s: 'none', big: fmt.t('no_data'), lines: [fmt.t('car_no_rule')] };
         } else {
@@ -1168,7 +1192,7 @@ export function buildPlan(payload, inputs, visa, env) {
         if (payload.winter?.[r.cc] && start) {
             const south = (cities.find(c => c.cc === r.cc)?.lat ?? 1) < 0;
             // Зима может наступить к обратной дороге: строка нужна, если в сезон попадает любой заезд.
-            const wrow = [p, p.back].filter(Boolean).map(v => winterRow(payload.winter[r.cc], v, fmt, south)).find(x => x.active);
+            const wrow = [p, p.back].filter(Boolean).map(v => winterRow(payload.winter[r.cc], v, fmt, south, vehicleKind(inputs) === 'heavy')).find(x => x.active);
             if (wrow) {
                 rows.push(wrow);
             }

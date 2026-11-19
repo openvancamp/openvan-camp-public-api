@@ -27,7 +27,11 @@ export function coldMonths(presence, south) {
  * где у каждого значения есть источник с дословной цитатой. Нет данных — строки нет:
  * догадку о чужих правилах не показываем.
  */
-export function winterRow(w, presence, fmt, south = false) {
+export function winterRow(w, presence, fmt, south = false, heavy = false) {
+    // Свыше 3,5 т в части стран свои нормы (AT: шипы запрещены, протектор от 5 мм — KDV §4).
+    if (heavy && w.heavy) {
+        w = { ...w, ...w.heavy };
+    }
     const year = presence?.entry ? presence.entry.getFullYear() : new Date().getFullYear();
     const range = per => per ? `${fmt.dateShort(mdDate(per.from, year))} – ${fmt.dateShort(mdDate(per.to, year))}` : '';
     const on = per => presence ? inSeason(per, presence.entry, presence.exit) : false;
@@ -48,7 +52,8 @@ export function winterRow(w, presence, fmt, south = false) {
         lines.push(fmt.t('winter_marking_3pmsf'));
     }
     if (w.min_tread_mm) {
-        lines.push(fmt.t('winter_tread', { mm: fmt.num(w.min_tread_mm) }));
+        // ТР ТС 018 (ЕАЭС): шина непригодна при протекторе «не более 4 мм» — нужно больше, а не «не меньше».
+        lines.push(fmt.t(w.min_tread_strict ? 'winter_tread_over' : 'winter_tread', { mm: fmt.num(w.min_tread_mm) }));
     }
     const studsBanned = w.studs === 'banned' || (w.studs_banned_period && on(w.studs_banned_period));
     if (w.studs === 'banned') {
@@ -75,10 +80,11 @@ export function winterRow(w, presence, fmt, south = false) {
         key: 'winter',
         s: active ? 'warn' : 'ok',
         active, lines,
-        big: active ? fmt.t('winter_active') : null,
+        // Правило части регионов (US — штаты, CA — Квебек/БК) — не утверждаем, что оно действует на этом маршруте.
+        big: active ? fmt.t(w.scope === 'region' ? 'winter_active_region' : 'winter_active') : null,
         chains: !!w.chains && (active || !presence),
         studsBanned,
-        tyresNeeded: active && w.tyres !== 'recommended',
+        tyresNeeded: active && w.tyres !== 'recommended' && w.scope !== 'region',
         source: first?.url || null,
     };
 }

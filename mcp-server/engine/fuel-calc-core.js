@@ -852,7 +852,7 @@ function tollFreeNoticeText(tollFree, t, countryName) {
  * @param {string} reason
  * @param {?{coordinates?:Array<[number,number]>, fuel?:string, tank?:?number, currency?:string, cons?:?number, dist?:string, vol?:string}} route
  */
-function reportRouteFailure(reason, route) {
+export function reportRouteFailure(reason, route) {
     try {
         fetch('/api/map/route-failure', {
             method: 'POST',

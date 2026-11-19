@@ -81,8 +81,9 @@ export function holidaysRow(set, windows, fmt) {
         // Есть что-то в даты поездки — повод учесть (жёлтый); ничего — проверено, спокойно.
         s: items.length ? 'warn' : 'ok',
         items,
-        // Календарь каникул на эти даты неизвестен — «каникул нет» было бы неправдой.
-        big: items.length ? null : fmt.t(notes.length ? 'holidays_none_public' : 'holidays_none'),
+        // Календарь каникул на эти даты неизвестен или каникул страны у нас нет совсем (181 страна
+        // из 213, факт-чек 19.11) — «каникул нет» было бы неправдой.
+        big: items.length ? null : fmt.t(notes.length || !until ? 'holidays_none_public' : 'holidays_none'),
         lines: items.length ? [items[0].name] : [],
     };
 }
