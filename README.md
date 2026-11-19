@@ -506,7 +506,7 @@ Accept: application/json
 
 ## Rate Limiting
 
-120 requests per minute per IP. Please be responsible:
+120 requests per minute per IP, the same for everyone. `source` does not raise it, but if the server is ever overloaded, requests without `source` may receive `503` with `Retry-After` first (see [Identify your integration](#identify-your-integration)). Please be responsible:
 - Cache fuel prices for at least 6 hours
 - Cache currency rates for at least 1 hour
 - Cache stories/events for at least 15 minutes
@@ -529,7 +529,7 @@ The same snippet comes in every response as `_attribution.attribution_html`, and
 
 ### Identify your integration
 
-Pass `?source=yoursite.com` with any request — no registration needed. Your value is echoed back as `_attribution.your_source` so you can verify it's working:
+Add `?source=yoursite.com` (your site's domain or your app's name) to every request. No key or sign-up needed. It lets us see how many requests come from your project, and the value is echoed back as `_attribution.your_source` so you can verify it's working:
 
 ```bash
 curl "https://openvan.camp/api/fuel/prices?source=myapp.com"
@@ -552,7 +552,15 @@ curl "https://openvan.camp/api/fuel/prices?source=myapp.com"
 }
 ```
 
-This helps us understand how the data is being used and acknowledge active projects.
+Optionally, put an email address in your `User-Agent` so we can warn you before any breaking change to the API. Only the OpenVan.camp team sees it:
+
+```
+User-Agent: MyApp/1.0 (+https://myapp.com; dev@myapp.com)
+```
+
+Requests without `source` get the same data, plus a reminder in `_attribution.identify` and the `X-OpenVan-Identify` header.
+
+The API stays free and keyless, and the limits stay the same. If the server is ever overloaded, requests with `source` are served first, and requests without it may receive `503` with a `Retry-After` header (the number of seconds to wait before retrying). Requests that include `source` are not affected by this.
 
 ---
 

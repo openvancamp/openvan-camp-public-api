@@ -173,6 +173,8 @@ Environment variables (optional):
 
 120 requests / minute per IP. Responses include `X-RateLimit-Remaining` headers. If you hit the limit, contact hello@openvan.camp to request a higher quota for your integration.
 
+If the API server is under heavy load, requests with a `source` are answered first. The server sets `source` for you; with `OPENVAN_SOURCE` you can put your own integration name there.
+
 ---
 
 ## Development

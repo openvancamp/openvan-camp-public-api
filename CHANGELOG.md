@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-19
+
+### Added — identify your integration
+- Responses to requests without `?source=` now carry a reminder in `_attribution.identify` and an
+  `X-OpenVan-Identify` header. The data is unchanged; requests with your own `source` get neither.
+- A contact can go in the User-Agent: `MyApp/1.0 (+https://myapp.com; dev@myapp.com)`. Only the
+  OpenVan.camp team sees it; we use it to warn you before a breaking change.
+- The API stays free and keyless, and the limits stay the same. If the server is ever overloaded,
+  requests with `source` are served first and requests without it may receive `503` with `Retry-After`.
+- SDKs: set your own `source`; the defaults `openvan-sdk` / `openvan-python` don't identify your app.
+
 ## 2026-11-08
 
 ### Changed — MCP v0.12.1, plugin 1.0.6

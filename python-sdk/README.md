@@ -16,7 +16,7 @@ pip install openvan
 ```python
 from openvan import OpenVan
 
-ov = OpenVan(source="myapp.com")  # source is optional: it lets us see and credit your project
+ov = OpenVan(source="myapp.com")  # your site or app name; the default "openvan-python" does not identify you
 
 # Cheapest diesel in the world right now, EUR per liter
 for c in ov.fuel.cheapest("diesel", 5):

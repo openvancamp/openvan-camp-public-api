@@ -80,10 +80,12 @@ const customs = await ov.customs.country("NO", { from: "DE" });
 ```ts
 const ov = new OpenVan({
   baseUrl: "https://openvan.camp", // default
-  source: "my-app",                // attribution tag (optional)
+  source: "my-app",                // your site or app name: identifies your integration (recommended)
   fetch: customFetch,              // custom fetch implementation (optional)
 });
 ```
+
+Set `source` to your own site or app name. Without it the SDK sends `openvan-sdk`, which doesn't tell us who you are: see [Identify your integration](https://github.com/openvancamp/openvan-camp-public-api#identify-your-integration).
 
 ---
 

@@ -21,7 +21,10 @@ code against it; interactive docs at <https://openvan.camp/docs>. Endpoint list:
    `Data: <a href="https://openvan.camp/">OpenVan.camp</a> (CC BY 4.0)`. Render it visibly in
    the UI you generate (not only in a code comment or README), wherever the data appears.
 2. **Identify the integration:** add `source=<site-or-app>` to every request (the SDKs take it
-   as an option). It is echoed back as `_attribution.your_source`.
+   as an option). It is echoed back as `_attribution.your_source`. Responses without it carry a
+   reminder in `_attribution.identify`. If the server is overloaded, requests with `source` are served
+   first; the others may receive `503` with `Retry-After`. A contact can go in the User-Agent:
+   `MyApp/1.0 (+https://myapp.com; dev@myapp.com)`.
 3. **Send `Accept: application/json`.** Without it some errors come back as HTML.
 4. **Prefer the SDK** when the project is JS/TS or Python — it handles grade units, currencies
    and the source parameter:

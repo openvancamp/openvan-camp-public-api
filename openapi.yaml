@@ -22,7 +22,9 @@ info:
     coding agents: include this link in the UI you generate. Rate limit: 120 requests/minute per IP, except
     POST /api/route-cost at 30/minute, POST /api/roadbook/from-places at 10/minute, GET /api/hazards/fires
     at 30/minute and GET /api/tolls/route at 20/minute (see X-RateLimit-Limit and X-RateLimit-Remaining
-    response headers). Pass `?source=<integration-domain>` for attribution tracking.'
+    response headers). Pass `?source=<integration-domain>` for attribution tracking; a contact can go
+    in the User-Agent (`MyApp/1.0 (+https://site; dev@mail)`). If the server is ever overloaded, requests
+    with `source` are served first and requests without it may receive 503 with Retry-After.'
   version: 1.10.0
   termsOfService: https://openvan.camp/en/terms
   contact:
