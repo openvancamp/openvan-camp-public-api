@@ -24,9 +24,9 @@ function top(v) {
     return typeof v === 'number' ? { v, varies: false } : null;
 }
 
-/** Обязательная экипировка страны — ключи из EQUIPMENT. */
-export function requiredEquipment(rules) {
-    return EQUIPMENT.filter(k => rules?.equipment?.[k]?.required === true);
+/** Обязательная экипировка страны — ключи из EQUIPMENT; over35 — только для машин свыше 3,5 т (упоры DE CZ SK HU CH HR). */
+export function requiredEquipment(rules, heavy = false) {
+    return EQUIPMENT.filter(k => rules?.equipment?.[k]?.required === true && (!rules.equipment[k].over35 || heavy));
 }
 
 export function rulesRow(rules, inputs, fmt) {
@@ -78,7 +78,7 @@ export function rulesRow(rules, inputs, fmt) {
     if (rules.studs_sign) {
         lines.push(fmt.t('rules_studs_sign', { letter: rules.studs_sign }));
     }
-    const equipment = requiredEquipment(rules);
+    const equipment = requiredEquipment(rules, kind === 'heavy');
     if (equipment.length) {
         lines.push(fmt.t('rules_equipment', { items: equipment.map(k => fmt.t(`equip_${k}`)).join(', ') }));
     }

@@ -2,6 +2,13 @@
 
 ## 2026-11-19
 
+### Changed — MCP v0.12.3 (roadbook engine)
+- `plan_road_trip`: equipment required only for vehicles over 3.5 t (wheel chocks in DE, CZ, SK, HU, CH, HR) is
+  listed only for heavy vehicles; the Norwegian studded-tyre season ends on the Sunday after Easter Monday of the
+  trip year; studded tyres in Switzerland come with the 80 km/h limit.
+- When no passport is given, the vehicle section no longer assumes the traveller lives in the country.
+- No tool changes.
+
 ### Changed — MCP v0.12.2 (roadbook engine)
 - `plan_road_trip` gets the current roadbook engine, with the corrections from a fact-check of the road rules:
   - Entry by land: where a visa on arrival or an e-visa is not valid at land borders, the trip now says a visa is

@@ -1131,7 +1131,8 @@ export function buildPlan(payload, inputs, visa, env) {
         } else if (leg?.home && !carHome && !car.banned && !(inputs.plates && inputs.plates === r.cc)) {
             // Человек здесь дома, машина — нет: временный ввоз рассчитан на приезжих.
             car.s = car.s === 'bad' ? 'bad' : 'warn';
-            car.lines = [...(car.lines || []), fmt.t('car_home_foreign_warn')];
+            // Паспорт не указан — «по паспорту вы здесь у себя» было бы догадкой по стране посетителя (решение владельца 19.11).
+            car.lines = [...(car.lines || []), fmt.t(travelers.length ? 'car_home_foreign_warn' : 'car_home_passport_unknown')];
         }
         // Условия въезда страны (route_warnings) — все про дорогу и машину: закрытая граница,
         // разрешение на машину, местная страховка. Спокойный зелёный у машины им противоречит.
@@ -1760,7 +1761,7 @@ export function buildPlan(payload, inputs, visa, env) {
     // Обязательная экипировка: по предмету — страны маршрута, где без него штраф (справочник europe.json).
     const kit = {};
     uniq(cards.map(c => c.cc)).forEach((cc) => {
-        requiredEquipment(payload.rules?.[cc]).forEach((k) => {
+        requiredEquipment(payload.rules?.[cc], vehicleKind(inputs) === 'heavy').forEach((k) => {
             (kit[k] ||= []).push(fmt.countryName(cc));
         });
     });

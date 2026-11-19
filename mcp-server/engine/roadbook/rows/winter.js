@@ -27,10 +27,28 @@ export function coldMonths(presence, south) {
  * где у каждого значения есть источник с дословной цитатой. Нет данных — строки нет:
  * догадку о чужих правилах не показываем.
  */
+/** Пасхальное воскресенье (григорианский календарь, алгоритм Мееуса). */
+function easterSunday(y) {
+    const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4;
+    const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31), day = ((h + l - 7 * m + 114) % 31) + 1;
+
+    return new Date(y, month - 1, day);
+}
+
 export function winterRow(w, presence, fmt, south = false, heavy = false) {
     // Свыше 3,5 т в части стран свои нормы (AT: шипы запрещены, протектор от 5 мм — KDV §4).
     if (heavy && w.heavy) {
         w = { ...w, ...w.heavy };
+    }
+    // Конец сезона шипов от Пасхи (NO: первое воскресенье после второго дня Пасхи = Пасха + 7, forskrift § 1-4).
+    if (w.studs_period?.to === 'easter+7') {
+        const at = presence?.entry || new Date();
+        const y = at.getMonth() >= 6 ? at.getFullYear() + 1 : at.getFullYear();
+        const e = easterSunday(y);
+        e.setDate(e.getDate() + 7);
+        w = { ...w, studs_period: { ...w.studs_period, to: `${String(e.getMonth() + 1).padStart(2, '0')}-${String(e.getDate()).padStart(2, '0')}` } };
     }
     const year = presence?.entry ? presence.entry.getFullYear() : new Date().getFullYear();
     const range = per => per ? `${fmt.dateShort(mdDate(per.from, year))} – ${fmt.dateShort(mdDate(per.to, year))}` : '';
