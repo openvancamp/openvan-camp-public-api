@@ -221,6 +221,14 @@ function hideFromToolList(server: McpServer, name: string): void {
 /** Языки, которые знают карточки и сайт. */
 const LOCALES = new Set(["en", "ru", "de", "fr", "es", "pt", "tr"]);
 
+/** Любой присланный язык → один из наших; не строка (нет locale) пропускается как есть. */
+export function normalizeLocale(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  if (value.trim() === "") return undefined;
+  const short = value.trim().slice(0, 2).toLowerCase();
+  return LOCALES.has(short) ? short : "en";
+}
+
 export function createServer(host: HostKind = "other"): McpServer {
   const server = new McpServer(
     {
@@ -246,7 +254,10 @@ export function createServer(host: HostKind = "other"): McpServer {
     const shape = config.inputSchema;
     if (shape && shape.locale) {
       const { locale, ...rest } = shape;
-      config = { ...config, inputSchema: { locale: locale.describe(LOCALE_HINT), ...rest } };
+      // Язык, которого нет у нас, — не повод отказать: Claude прислал «it» и «uk», и человек
+      // остался без поездки (журнал MCP, 02.11 и 12.11.2026). «pt-BR»/«RU» → «pt»/«ru», остальное → «en».
+      const anyLocale = z.preprocess(normalizeLocale, locale.describe(LOCALE_HINT));
+      config = { ...config, inputSchema: { locale: anyLocale, ...rest } };
       // Модель забыла locale — берём язык человека, который ChatGPT шлёт в _meta запроса.
       const inner = cb;
       cb = (args, extra) => {

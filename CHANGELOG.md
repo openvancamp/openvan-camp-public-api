@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-20
+
+### Fixed — MCP v0.12.4
+- A `locale` outside the supported seven no longer rejects the call: `it`, `uk` and other languages fall back to
+  English, and regional or upper-case forms are understood (`pt-BR` → `pt`, `RU` → `ru`). Before, such a call
+  failed with an input validation error and the user got no answer.
+- No tool changes.
+
 ## 2026-11-19
 
 ### Changed — MCP v0.12.3 (roadbook engine)
