@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-24
+
+### Fixed — MCP v0.12.5
+- The hosted server (`mcp.openvan.camp`) accepts the argument names and values agents often guess instead of
+  rejecting the call: `countries` (also as a comma-separated string) and `fuel` in `compare_fuel_prices`,
+  `fuel` in `find_cheapest_fuel`, `from_currency` / `to_currency` in `get_currency_rate`; `petrol`, `gas`,
+  `benzin`, `unleaded` as `gasoline`; a region in any case or with spaces (`Europe`, `North America`);
+  `Exhibition` and other plural or spelled-out event types in `list_events`. Before, such a call failed with an
+  input validation error and the user got no answer.
+- No tool changes.
+
 ## 2026-11-20
 
 ### Fixed — MCP v0.12.4

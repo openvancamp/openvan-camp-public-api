@@ -71,6 +71,49 @@ export function normalizeCountryArgs(tool: string, args: Record<string, unknown>
   }
 }
 
+/**
+ * Имена и значения аргументов, которые агенты угадывают вместо наших. Python-агент 23–24.11.2026
+ * (журнал MCP) каждый день повторял одно и то же: countries, fuel, from_currency, «petrol»,
+ * «Europe», «Exhibition» — и не получал ответа. Каноническое имя, если пришло, главнее синонима.
+ */
+const ARG_ALIASES: Record<string, Record<string, string>> = {
+  compare_fuel_prices: { countries: "country_codes", fuel: "fuel_type" },
+  find_cheapest_fuel: { fuel: "fuel_type" },
+  get_currency_rate: { from_currency: "from", to_currency: "to" },
+};
+const FUEL_ALIASES: Record<string, string> = {
+  petrol: "gasoline", gas: "gasoline", benzin: "gasoline", benzine: "gasoline", unleaded: "gasoline",
+};
+const FUEL_TOOLS = new Set(["compare_fuel_prices", "find_cheapest_fuel"]);
+const REGION_TOOLS = new Set(["find_cheapest_fuel", "rank_food_prices", "list_best_weather_countries"]);
+const EVENT_TYPE_ALIASES: Record<string, string> = {
+  exhibition: "expo", exhibitions: "expo", expos: "expo", fair: "expo", trade_show: "expo", show: "expo",
+  festivals: "festival", forums: "forum", meetups: "meetup", meet_up: "meetup", road_trip: "roadtrip", roadtrips: "roadtrip",
+};
+
+const slug = (v: string): string => v.trim().toLowerCase().replace(/[\s-]+/g, "_");
+
+export function normalizeArgAliases(tool: string, args: Record<string, unknown>): void {
+  for (const [alias, name] of Object.entries(ARG_ALIASES[tool] ?? {})) {
+    if (alias in args) {
+      if (!(name in args)) args[name] = args[alias];
+      delete args[alias];
+    }
+  }
+  if (tool === "compare_fuel_prices" && typeof args.country_codes === "string") {
+    args.country_codes = args.country_codes.split(/\s*[,;]\s*/).filter(Boolean);
+  }
+  if (FUEL_TOOLS.has(tool) && typeof args.fuel_type === "string") {
+    const v = slug(args.fuel_type);
+    args.fuel_type = FUEL_ALIASES[v] ?? v;
+  }
+  if (REGION_TOOLS.has(tool) && typeof args.region === "string") args.region = slug(args.region);
+  if (tool === "list_events" && typeof args.type === "string") {
+    const v = slug(args.type);
+    args.type = EVENT_TYPE_ALIASES[v] ?? v;
+  }
+}
+
 /** Применить к телу запроса (одиночный JSON-RPC или пачка) до того, как SDK проверит схему. */
 export function normalizeToolCallBody(body: unknown): void {
   for (const message of Array.isArray(body) ? body : [body]) {
@@ -78,6 +121,7 @@ export function normalizeToolCallBody(body: unknown): void {
     if (m?.method !== "tools/call" || typeof m.params?.name !== "string") continue;
     const args = m.params.arguments;
     if (args && typeof args === "object" && !Array.isArray(args)) {
+      normalizeArgAliases(m.params.name, args as Record<string, unknown>);
       normalizeCountryArgs(m.params.name, args as Record<string, unknown>);
     }
   }
