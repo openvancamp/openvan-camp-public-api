@@ -34,8 +34,12 @@ check "npm @openvancamp/sdk latest" "$(npm view @openvancamp/sdk dist-tags.lates
 check "PyPI openvan" "$(curl -sf https://pypi.org/pypi/openvan/json | jq -r .info.version)" "$PY_VERSION"
 check "MCP Registry $REGISTRY_NAME latest" "$(curl -sf "https://registry.modelcontextprotocol.io/v0.1/servers?search=${REGISTRY_NAME#*/}" \
   | jq -r --arg n "$REGISTRY_NAME" '.servers[] | select(.server.name == $n and ._meta."io.modelcontextprotocol.registry/official".isLatest) | .server.version')" "$MCP_VERSION"
+# Anonymous GitHub API calls share a 60/hour limit per runner IP and get 403 once it is used up;
+# with GH_TOKEN set (the workflow passes github.token) the limit is per token.
+GH_AUTH=()
+[ -n "${GH_TOKEN:-}" ] && GH_AUTH=(-H "Authorization: Bearer $GH_TOKEN")
 for tag in "mcp-server-v$MCP_VERSION" "sdk-v$SDK_VERSION" "python-v$PY_VERSION"; do
-  code=$(curl -s -o /dev/null -w '%{http_code}' "https://api.github.com/repos/openvancamp/openvan-camp-public-api/releases/tags/$tag")
+  code=$(curl -s -o /dev/null -w '%{http_code}' ${GH_AUTH[@]+"${GH_AUTH[@]}"} "https://api.github.com/repos/openvancamp/openvan-camp-public-api/releases/tags/$tag")
   check "GitHub Release $tag" "$code" "200"
 done
 check "live /docs.openapi version" "$(curl -sf "https://openvan.camp/docs.openapi?nc=$RANDOM" | sed -n 's/^  version: *//p' | head -1 | tr -d "'\"")" "$SPEC_VERSION"

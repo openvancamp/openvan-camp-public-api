@@ -37,4 +37,6 @@ jobs:
           done
           sleep 60
       - name: Verify
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: bash scripts/verify-distribution.sh
