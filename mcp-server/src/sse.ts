@@ -2,8 +2,9 @@
 /**
  * OpenVan.camp MCP Server — Streamable HTTP entry point.
  *
- * Hosts the same createServer() over Express + StreamableHTTPServerTransport
- * at POST/GET/DELETE /mcp. Runs stateless (session-less) so each request
+ * Hosts the same createServer() over Express at POST/GET/DELETE /mcp: protocol
+ * revision 2026-07-28 (server/discover, per-request _meta) via SDK v2
+ * createMcpHandler, 2025 revisions via NodeStreamableHTTPServerTransport. Runs stateless (session-less) so each request
  * is an independent JSON-RPC exchange — simplest mode for public hosting
  * behind a reverse proxy.
  *
@@ -17,7 +18,8 @@
  */
 import express from "express";
 import { randomUUID } from "node:crypto";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { createMcpHandler, isLegacyRequest } from "@modelcontextprotocol/server";
+import { NodeStreamableHTTPServerTransport, toNodeHandler, toWebRequest } from "@modelcontextprotocol/node";
 
 import { VERSION } from "./config.js";
 import { createServer, hostFromUserAgent, LEGACY_TOOL_NAMES } from "./server.js";
@@ -75,16 +77,14 @@ async function main() {
     );
   });
 
-  // Main MCP transport. Stateless: each request gets a fresh transport +
-  // server instance. Fine for read-only tools with no per-session state.
+  // Main MCP transport. Stateless: each request gets a fresh server instance
+  // (both protocol eras). Fine for read-only tools with no per-session state.
+  const mcp = createMcpHandler(
+    (ctx) => createServer(hostFromUserAgent(ctx.requestInfo?.headers.get("user-agent") ?? undefined)),
+    { legacy: "reject", responseMode: "json", onerror: (e) => process.stderr.write(`[openvan-mcp-sse] ${e.message}\n`) }
+  );
+  const serveMcp = toNodeHandler(mcp);
   const handleMcp = async (req: express.Request, res: express.Response) => {
-    const server = createServer(hostFromUserAgent(req.headers["user-agent"]));
-    const transport = new StreamableHTTPServerTransport({
-      // Stateless mode — no session tracking.
-      sessionIdGenerator: undefined,
-      enableJsonResponse: true,
-    });
-
     // Telemetry — какие инструменты вызвал клиент (имя + аргументы), кто он
     // (User-Agent) и откуда (IP). Снимаем ДО handleRequest, логируем ПОСЛЕ.
     const toolCalls = extractToolCalls(req.body);
@@ -166,15 +166,22 @@ async function main() {
       // Клиент ушёл, не дождавшись ответа (долгий plan_road_trip, таймаут хоста): раньше такой
       // вызов не попадал в журнал совсем — запись делалась только по «finish».
       if (!res.writableFinished) recordToolCalls(false, true);
-      void transport.close();
-      void server.close();
     });
 
     try {
-      await server.connect(transport);
       // Пишем, когда ответ ушёл целиком: тогда в копии тела есть результат вызова.
       res.on("finish", () => recordToolCalls(res.statusCode < 400));
-      await transport.handleRequest(req, res, req.body);
+      if (await isLegacyRequest(await toWebRequest(req, req.body))) {
+        // 2025-ревизии — как в 0.12.x: свой сервер и транспорт на запрос, ответ JSON (штатный
+        // legacy-режим v2 отвечает SSE даже клиентам с Accept: application/json).
+        const server = createServer(hostFromUserAgent(req.headers["user-agent"]));
+        const transport = new NodeStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
+        res.on("close", () => { void transport.close(); void server.close(); });
+        await server.connect(transport);
+        await transport.handleRequest(req, res, req.body);
+      } else {
+        await serveMcp(req, res, req.body);
+      }
     } catch (err) {
       recordToolCalls(false);
       process.stderr.write(

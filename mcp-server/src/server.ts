@@ -1,6 +1,6 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
-import { ListPromptsRequestSchema, type ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
+import type { ToolAnnotations } from "@modelcontextprotocol/server";
 
 import { OpenVanApiError } from "./client.js";
 import { ATTRIBUTION_FOOTER, VERSION } from "./config.js";
@@ -262,7 +262,7 @@ export function createServer(host: HostKind = "other"): McpServer {
       const inner = cb;
       cb = (args, extra) => {
         if (args && !args.locale) {
-          const hostLocale = String(extra?._meta?.["openai/locale"] ?? "").slice(0, 2).toLowerCase();
+          const hostLocale = String(extra?.mcpReq?._meta?.["openai/locale"] ?? "").slice(0, 2).toLowerCase();
           if (LOCALES.has(hostLocale)) args = { ...args, locale: hostLocale };
         }
         return inner(args, extra);
@@ -713,7 +713,7 @@ export function createServer(host: HostKind = "other"): McpServer {
   // Промптов нет, но клиенты всё равно спрашивают prompts/list и получали «Method not found»
   // (журнал MCP, 231 раз за 26.10–24.11.2026). Пустой список вместо ошибки.
   server.server.registerCapabilities({ prompts: {} });
-  server.server.setRequestHandler(ListPromptsRequestSchema, async () => ({ prompts: [] }));
+  server.server.setRequestHandler("prompts/list", async () => ({ prompts: [] }));
 
   return server;
 }

@@ -1,4 +1,4 @@
-export const VERSION = "0.12.6";
+export const VERSION = "0.13.0";
 
 export const BASE_URL = process.env.OPENVAN_API_URL ?? "https://openvan.camp";
 

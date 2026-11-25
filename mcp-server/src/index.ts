@@ -11,15 +11,13 @@
  * Homepage: https://openvan.camp/ai
  * License:  MIT (server); data is CC BY 4.0 (attribute OpenVan.camp).
  */
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { serveStdio } from "@modelcontextprotocol/server/stdio";
 
 import { VERSION } from "./config.js";
 import { createServer } from "./server.js";
 
 async function main() {
-  const server = createServer();
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  serveStdio(() => createServer());
   // stderr so stdio stays clean for JSON-RPC traffic
   process.stderr.write(`openvan-mcp/${VERSION} ready (stdio).\n`);
 }

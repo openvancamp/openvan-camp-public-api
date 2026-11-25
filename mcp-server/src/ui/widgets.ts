@@ -1,5 +1,5 @@
 import type { HostKind } from "../server.js";
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 
 import { page, SITE, UI_BASE } from "./bridge.js";
 import { MONEY_HTML, MONEY_WIDGETS } from "./money.js";

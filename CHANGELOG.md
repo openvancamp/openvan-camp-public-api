@@ -2,6 +2,17 @@
 
 ## 2026-11-25
 
+### Added — MCP v0.13.0
+- MCP protocol revision 2026-07-28: `server/discover` and per-request `_meta` on the hosted server
+  (`mcp.openvan.camp`) and over stdio. Clients that send `MCP-Protocol-Version: 2026-07-28` were rejected with
+  HTTP 400 and had to fall back to `initialize`; now they connect on the first request.
+- Revisions 2025-06-18 and 2025-11-25 (`initialize`) work as before: same 32 tools, same answers, plain JSON
+  responses.
+
+### Changed — MCP v0.13.0
+- Built on MCP TypeScript SDK v2 (`@modelcontextprotocol/server` 2.4.0, `@modelcontextprotocol/node` 2.1.2)
+  instead of `@modelcontextprotocol/sdk` 1.x. The npm package now needs Node.js 20 or later (was 18).
+
 ### Fixed — MCP v0.12.6
 - `compare_fuel_prices` accepts 1 to 30 countries (was 2 to 10): a single country returns its price instead of an
   input validation error, and a longer list is no longer rejected.
