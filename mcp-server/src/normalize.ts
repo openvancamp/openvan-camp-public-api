@@ -74,12 +74,13 @@ export function normalizeCountryArgs(tool: string, args: Record<string, unknown>
 /**
  * Имена и значения аргументов, которые агенты угадывают вместо наших. Python-агент 23–24.11.2026
  * (журнал MCP) каждый день повторял одно и то же: countries, fuel, from_currency, «petrol»,
- * «Europe», «Exhibition» — и не получал ответа. Каноническое имя, если пришло, главнее синонима.
+ * «Europe», «Exhibition» — и не получал ответа. 25.11: places вместо waypoints, amount строкой «100». Каноническое имя, если пришло, главнее синонима.
  */
 const ARG_ALIASES: Record<string, Record<string, string>> = {
   compare_fuel_prices: { countries: "country_codes", fuel: "fuel_type" },
   find_cheapest_fuel: { fuel: "fuel_type" },
   get_currency_rate: { from_currency: "from", to_currency: "to" },
+  plan_road_trip: { places: "waypoints" },
 };
 const FUEL_ALIASES: Record<string, string> = {
   petrol: "gasoline", gas: "gasoline", benzin: "gasoline", benzine: "gasoline", unleaded: "gasoline",
@@ -108,6 +109,9 @@ export function normalizeArgAliases(tool: string, args: Record<string, unknown>)
     args.fuel_type = FUEL_ALIASES[v] ?? v;
   }
   if (REGION_TOOLS.has(tool) && typeof args.region === "string") args.region = slug(args.region);
+  if (tool === "get_currency_rate" && typeof args.amount === "string" && /^\s*\d+([.,]\d+)?\s*$/.test(args.amount)) {
+    args.amount = Number(args.amount.trim().replace(",", "."));
+  }
   if (tool === "list_events" && typeof args.type === "string") {
     const v = slug(args.type);
     args.type = EVENT_TYPE_ALIASES[v] ?? v;

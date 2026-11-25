@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
+import { ListPromptsRequestSchema, type ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 
 import { OpenVanApiError } from "./client.js";
 import { ATTRIBUTION_FOOTER, VERSION } from "./config.js";
@@ -338,7 +338,7 @@ export function createServer(host: HostKind = "other"): McpServer {
     {
       title: "Compare Fuel Prices",
       description:
-        "Compare current prices for one fuel type across 2-10 countries. Returns sorted table cheapest-first. Use it when someone asks which of two or more named countries has cheaper or more expensive fuel.",
+        "Compare current prices for one fuel type across 1-30 countries. Returns sorted table cheapest-first. Use it when someone asks which of two or more named countries has cheaper or more expensive fuel.",
       inputSchema: { ...compareFuelPricesInput, locale: CARD_LOCALE },
       annotations: readOnlyAnnotations("Compare Fuel Prices"),
       _meta: toolUiMeta(WIDGETS.fuel, "Comparing fuel prices…", "Comparison ready"),
@@ -709,6 +709,11 @@ export function createServer(host: HostKind = "other"): McpServer {
 
   // Интерактивные карточки (MCP Apps) для погоды и событий
   registerWidgets(server, host);
+
+  // Промптов нет, но клиенты всё равно спрашивают prompts/list и получали «Method not found»
+  // (журнал MCP, 231 раз за 26.10–24.11.2026). Пустой список вместо ошибки.
+  server.server.registerCapabilities({ prompts: {} });
+  server.server.setRequestHandler(ListPromptsRequestSchema, async () => ({ prompts: [] }));
 
   return server;
 }

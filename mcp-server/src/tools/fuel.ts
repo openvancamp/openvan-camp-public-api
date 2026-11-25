@@ -303,9 +303,9 @@ function fmt(v: number | null | undefined): string {
 export const compareFuelPricesInput = {
   country_codes: z
     .array(z.string().length(2))
-    .min(2)
-    .max(10)
-    .describe("Array of 2-10 ISO 3166-1 alpha-2 country codes to compare."),
+    .min(1)
+    .max(30)
+    .describe("Array of 1-30 ISO 3166-1 alpha-2 country codes to compare."),
   fuel_type: z
     .enum(FUEL_TYPES)
     .default("diesel")

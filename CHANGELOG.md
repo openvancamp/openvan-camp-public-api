@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-25
+
+### Fixed — MCP v0.12.6
+- `compare_fuel_prices` accepts 1 to 30 countries (was 2 to 10): a single country returns its price instead of an
+  input validation error, and a longer list is no longer rejected.
+- The hosted server (`mcp.openvan.camp`) also accepts `places` for `waypoints` in `plan_road_trip` and a numeric
+  string for `amount` in `get_currency_rate` (`"100"`).
+- `prompts/list` returns an empty list instead of "Method not found" (the server has no prompts; some clients
+  ask for them on connect).
+
 ## 2026-11-24
 
 ### Fixed — MCP v0.12.5
