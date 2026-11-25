@@ -709,6 +709,10 @@ export function createServer(host: HostKind = "other"): McpServer {
 
   // Интерактивные карточки (MCP Apps) для погоды и событий
   registerWidgets(server, host);
+  // Карточки — расширение MCP Apps. В протоколе 2026-07-28 сервер объявляет расширения в
+  // capabilities.extensions (ответ server/discover и initialize); клиент, не увидевший его там,
+  // вправе считать карточки неподдержанными и показать только текст.
+  server.server.registerCapabilities({ extensions: { "io.modelcontextprotocol/ui": {} } });
 
   // Промптов нет, но клиенты всё равно спрашивают prompts/list и получали «Method not found»
   // (журнал MCP, 231 раз за 26.10–24.11.2026). Пустой список вместо ошибки.

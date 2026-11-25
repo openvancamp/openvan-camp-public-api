@@ -45,6 +45,21 @@ function renameLegacyToolCalls(body: unknown): void {
   }
 }
 
+/**
+ * Конверт ревизии 2026-07-28 (`_meta` с ключами io.modelcontextprotocol/*), в котором названа ревизия
+ * 2024–2025, — снимаем: у тех ревизий конверта нет, SDK v1 его не замечал, а v2 отвечал
+ * «Unsupported protocol version: 2025-06-18» (SentinelOracle 25.11.2026 шлёт так initialized и
+ * tools/list). Без конверта запрос идёт по 2025-ветке и обслуживается как до 0.13.0.
+ */
+function stripLegacyEnvelope(body: unknown): void {
+  for (const message of Array.isArray(body) ? body : [body]) {
+    const meta = (message as { params?: { _meta?: unknown } } | null)?.params?._meta as Record<string, unknown> | undefined;
+    const version = meta?.["io.modelcontextprotocol/protocolVersion"];
+    if (!meta || typeof meta !== "object" || typeof version !== "string" || !/^202[45]-/.test(version)) continue;
+    for (const key of Object.keys(meta)) if (key.startsWith("io.modelcontextprotocol/")) delete meta[key];
+  }
+}
+
 async function main() {
   const app = express();
   app.use(express.json({ limit: "1mb" }));
@@ -97,6 +112,7 @@ async function main() {
     const startedAt = Date.now();
     renameLegacyToolCalls(req.body);
     normalizeToolCallBody(req.body);
+    stripLegacyEnvelope(req.body);
     // Спецификация требует от клиента Accept с обоими типами, иначе SDK отвечает 406. Простые
     // клиенты шлют только application/json (журнал 13.10.2026: get_fuel_prices → HTTP 406).
     // Ответ у нас всё равно JSON (enableJsonResponse), так что заголовок дополняем.

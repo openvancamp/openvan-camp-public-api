@@ -2,6 +2,14 @@
 
 ## 2026-11-25
 
+### Fixed — MCP v0.13.1
+- The hosted server again answers clients that put a 2026-07-28 style `_meta` envelope into requests of revision
+  2024-11-05 to 2025-11-25 (for example `notifications/initialized` and `tools/list` with
+  `io.modelcontextprotocol/protocolVersion: 2025-06-18`). v0.13.0 rejected them with "Unsupported protocol
+  version"; the envelope is now dropped and the request is served as in v0.12.
+- The server declares the MCP Apps extension (`io.modelcontextprotocol/ui`) in `capabilities.extensions` of
+  `server/discover` and `initialize`, so 2026-07-28 clients know the tools come with interactive cards.
+
 ### Added — MCP v0.13.0
 - MCP protocol revision 2026-07-28: `server/discover` and per-request `_meta` on the hosted server
   (`mcp.openvan.camp`) and over stdio. Clients that send `MCP-Protocol-Version: 2026-07-28` were rejected with
