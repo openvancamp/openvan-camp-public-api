@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-27
+
+### Fixed — MCP v0.13.2
+- `plan_road_trip` computes the plan again on the hosted server. Since 2026-11-25 the roadbook engine takes its
+  fuel calculations from a module shared with the site map (`@map-features`, a bundler alias) that Node could not
+  resolve, and every trip came back as "the plan could not be computed here". The npm package now ships these
+  files in `engine/map-features/`.
+- When a tool returns text only, its card shows that text instead of staying on the loading placeholder.
+- A trip whose plan could not be computed is reported as an error (`isError`), not as a normal answer.
+
 ## 2026-11-25
 
 ### Fixed — MCP v0.13.1

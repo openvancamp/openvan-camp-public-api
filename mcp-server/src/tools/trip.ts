@@ -307,7 +307,7 @@ export async function planRoadTrip(args: Args) {
   // 4. План — движком роудбука.
   const result = await runPlan({ enginePath: enginePath(), payload, inputs: norm, visa, texts, units: rb.units ?? {}, locale, currency });
   if (!result.ok || !result.summary) {
-    return { content: [{ type: "text" as const, text: `The roadbook is ready, but the plan could not be computed here (${result.error}). Open it: ${roadbookUrl}` }] };
+    return { content: [{ type: "text" as const, text: `The roadbook is ready, but the plan could not be computed here (${result.error}). Open it: ${roadbookUrl}` }], isError: true };
   }
   const s = result.summary;
 

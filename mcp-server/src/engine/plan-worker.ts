@@ -9,6 +9,10 @@
  * resources/js/roadbook/page.js (там они живут внутри Alpine-компонента). Меняете их на
  * странице — повторите здесь.
  */
+import { existsSync } from "node:fs";
+import { registerHooks } from "node:module";
+import { dirname, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { parentPort, workerData } from "node:worker_threads";
 
 type Dict = Record<string, unknown>;
@@ -26,6 +30,29 @@ const { enginePath, payload, inputs, visa, texts, units, locale, currency } = wo
   locale: string;
   currency: string;
 };
+
+/**
+ * Модули сайта берут общий с ParkX код по псевдониму @map-features (vite.config.js, alias).
+ * Node псевдонимов Vite не знает: с 25.11.2026 каждый plan_road_trip падал «Cannot find
+ * package '@map-features/route'». Ищем папку модуля: OPENVAN_MAP_FEATURES, копия рядом с
+ * движком (npm-пакет), соседняя с репозиторием сайта (/home/vanlife/map-features). Свои
+ * зависимости модуль берёт у хоста — как resolve.dedupe в Vite.
+ */
+function useMapFeatures(): void {
+  const jsRoot = dirname(dirname(enginePath));
+  const dir = [process.env.OPENVAN_MAP_FEATURES, resolve(jsRoot, "map-features"), resolve(jsRoot, "../../../map-features")]
+    .find((d): d is string => !!d && existsSync(d));
+  if (!dir) return;
+  const dirUrl = pathToFileURL(dir).href + "/";
+  const hostUrl = pathToFileURL(enginePath).href;
+  registerHooks({
+    resolve(specifier, context, next) {
+      if (specifier.startsWith("@map-features/")) return next(new URL(specifier.slice("@map-features/".length), dirUrl).href, context);
+      if (context.parentURL?.startsWith(dirUrl) && !/^(\.|\/|node:|file:)/.test(specifier)) return next(specifier, { ...context, parentURL: hostUrl });
+      return next(specifier, context);
+    },
+  });
+}
 
 /** Копия distParam() из page.js: числа в шаблонах получают подпись единицы на языке роудбука. */
 const unit = (u: string, fallback: string) => units?.[u] || fallback;
@@ -97,6 +124,7 @@ function itemText(x: Dict): string {
 }
 
 try {
+  useMapFeatures();
   const { buildPlan } = await import(enginePath);
   const vm = buildPlan(payload, inputs, visa, { today: new Date(), journal: null, fmt: makeFmt(), moneyCurrency: currency });
 

@@ -124,8 +124,9 @@ function withAttribution<A extends any[], R>(handler: (...args: A) => Promise<R>
       if (NO_DATA.test(msg)) return noData(msg, locale) as R;
       return result;
     }
-    // С outputSchema SDK требует structuredContent у каждого успешного ответа.
-    if (!r.structuredContent) r.structuredContent = { message: r.content.find((c) => c.type === "text")?.text ?? "" };
+    // С outputSchema SDK требует structuredContent у каждого успешного ответа. Карточке в таком
+    // ответе рисовать нечего: nodata — и она покажет текст, а не застрянет на заглушке.
+    if (!r.structuredContent) r.structuredContent = { nodata: true, message: r.content.find((c) => c.type === "text")?.text ?? "" };
     const last = [...r.content].reverse().find((c) => c.type === "text" && typeof c.text === "string");
     if (last && !last.text!.includes("OpenVan.camp (CC BY 4.0)")) {
       last.text += ATTRIBUTION_FOOTER;
